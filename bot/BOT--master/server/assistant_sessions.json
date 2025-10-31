@@ -1,0 +1,70 @@
+{
+  "3c188035-9711-47a3-9b4c-4be35d22eefa": {
+    "createdAt": 1760132724180,
+    "messages": [
+      {
+        "role": "user",
+        "content": "tell me about forex markets"
+      },
+      {
+        "role": "assistant",
+        "content": "tell me about forex markets"
+      },
+      {
+        "role": "user",
+        "content": "jlo"
+      },
+      {
+        "role": "assistant",
+        "content": "tell me about forex markets"
+      },
+      {
+        "role": "user",
+        "content": "jlo"
+      },
+      {
+        "role": "assistant",
+        "content": "I read yI read your receour recent questnt questions: \"jions: \"jlo\". Asklo\". Ask me for  me for a specifa specific stratic strategy explegy explanation anation or sessior session advicon advice.e."
+      },
+      {
+        "role": "user",
+        "content": "hlo"
+      }
+    ],
+    "name": "Conversation"
+  },
+  "5987f01f-7f1b-4242-806d-98a4b15d8ddb": {
+    "createdAt": 1760132835245,
+    "messages": []
+  },
+  "385b2544-cb3e-4b5c-95f3-d6ede8533df6": {
+    "createdAt": 1760132835248,
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Hi! I'm your SniprX assistant. Ask me about strategies or the dashboard."
+      },
+      {
+        "role": "user",
+        "content": "tell me about forex markets"
+      },
+      {
+        "role": "assistant",
+        "content": "Hi! I'm your SniprX assistant. Ask me about strategies or the dashboard."
+      },
+      {
+        "role": "user",
+        "content": "tell me about forex markets"
+      },
+      {
+        "role": "assistant",
+        "content": "I read yI read your receour recent questnt questions: \"tions: \"tell me aell me about forbout forex markeex markets\". Askts\". Ask me for  me for a specifa specific stratic strategy explegy explanation anation or sessior session advicon advice.e."
+      },
+      {
+        "role": "user",
+        "content": "tell me about strategies"
+      }
+    ],
+    "name": ",,"
+  }
+}
