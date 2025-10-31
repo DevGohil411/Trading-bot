@@ -1,6 +1,6 @@
 # 🚀 MT5 Trading Bot - Complete AI-Powered Trading System
 
-> **Yaari se batate hain bhai!** Yeh ek complete AI-powered trading system hai jo MetaTrader 5 ke saath integrate hai. Isme 3 major components hain - Python Trading Bot, Next.js Dashboard, aur AI Assistant. Sab kuch automated hai bhai! 💪
+> **A fully automated trading system integrated with MetaTrader 5!** This project consists of 3 major components - Python Trading Bot, Next.js Dashboard, and AI Assistant. Everything is automated and powered by artificial intelligence! 💪
 
 ---
 
@@ -20,7 +20,7 @@ mt5_trading_bot/
 
 ## 🎯 System Architecture
 
-### **Kaise kaam karta hai yeh system?**
+### **How does this system work?**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -43,13 +43,13 @@ mt5_trading_bot/
 ### 1️⃣ **XAUUSD-bot** (Python Trading Bot) 🐍
 **Location:** `bot/XAUUSD-bot/`
 
-**Kya karta hai bhai?**
-- MT5 se connect karke live trading karta hai
-- Multiple strategies run karta hai (Order Block, MSB, Liquidity Sweep, etc.)
-- Machine Learning se trade filter karta hai
-- LLM se news sentiment analyze karta hai
-- FastAPI server se control hota hai
-- Telegram pe alerts bhejta hai
+**What does it do?**
+- Connects to MT5 and executes live trades
+- Runs multiple trading strategies (Order Block, MSB, Liquidity Sweep, etc.)
+- Filters trades using Machine Learning
+- Analyzes news sentiment using LLM
+- Controlled via FastAPI server
+- Sends alerts via Telegram
 
 **Key Files:**
 - `api_server.py` - FastAPI server (port 8000)
@@ -60,33 +60,33 @@ mt5_trading_bot/
 
 **Setup Steps:**
 ```bash
-# 1. Virtual environment banao
+# 1. Create virtual environment
 cd bot/XAUUSD-bot
 python -m venv venv
 venv\Scripts\activate
 
-# 2. Dependencies install karo
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Environment variables setup karo
-# .env.local file banao aur credentials dalo
+# 3. Setup environment variables
+# Create .env.local file and add credentials
 
-# 4. Config file edit karo
-# config.json mein apne MT5 credentials dalo
+# 4. Edit config file
+# Add your MT5 credentials in config.json
 
-# 5. Database initialize karo
+# 5. Initialize database
 python -c "import sqlite3; conn=sqlite3.connect('trades/trades.db'); conn.executescript(open('schema.sql').read()); conn.close()"
 
-# 6. API Server start karo
+# 6. Start API Server
 uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload
 
-# 7. Trading Bot start karo (new terminal)
+# 7. Start Trading Bot (in a new terminal)
 python -m STOCKDATA
 ```
 
 **Important Files to Configure:**
 ```json
-// config.json mein yeh settings zaroor check karo:
+// Make sure to check these settings in config.json:
 {
   "mt5": {
     "login": "your_mt5_login",
@@ -108,13 +108,13 @@ python -m STOCKDATA
 ### 2️⃣ **BOT--master** (Next.js Dashboard) ⚡
 **Location:** `bot/BOT--master/`
 
-**Kya karta hai bhai?**
-- Trading bot ko monitor karne ka dashboard
-- Live trades, analytics, charts dikhata hai
-- MT5 accounts manage karta hai
-- Telegram bot integration hai
-- Google OAuth se login system
-- Settings aur strategies configure kar sakte ho
+**What does it do?**
+- Provides a dashboard to monitor the trading bot
+- Displays live trades, analytics, and charts
+- Manages MT5 accounts
+- Telegram bot integration
+- Login system with Google OAuth
+- Configure settings and strategies
 
 **Key Features:**
 - 📊 Real-time trading dashboard
@@ -126,14 +126,14 @@ python -m STOCKDATA
 
 **Setup Steps:**
 ```bash
-# 1. Dependencies install karo
+# 1. Install dependencies
 cd bot/BOT--master
 npm install
 
-# 2. Environment variables setup karo
-# .env.local file banao
+# 2. Setup environment variables
+# Create .env.local file
 
-# 3. Development server start karo
+# 3. Start development server
 npm run dev
 # App runs at http://localhost:3000
 ```
@@ -154,11 +154,11 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 
 **Optional Express Backend:**
 ```bash
-# Server folder mein bhi ek backend hai
+# There's also a backend in the server folder
 cd server
 npm install
 
-# .env file banao aur configure karo
+# Create and configure .env file
 npm run dev
 ```
 
@@ -167,24 +167,24 @@ npm run dev
 ### 3️⃣ **my-app** (AI Assistant UI) 🤖
 **Location:** `my-app/`
 
-**Kya karta hai bhai?**
+**What does it do?**
 - AI assistant interface (chat-based)
-- Trading advice deta hai
-- Market analysis karta hai
-- assistant-ui library use karta hai
+- Provides trading advice
+- Performs market analysis
+- Uses assistant-ui library
 
 **Setup Steps:**
 ```bash
-# 1. Dependencies install karo
+# 1. Install dependencies
 cd my-app
 npm install
 # or
 pnpm install
 
-# 2. OpenAI API key setup karo
-# .env.local file banao
+# 2. Setup OpenAI API key
+# Create .env.local file
 
-# 3. Development server start karo
+# 3. Start development server
 npm run dev
 # App runs at http://localhost:3000
 ```
@@ -467,12 +467,12 @@ uvicorn api_server:app --port 8001
 
 ## 🤝 Contributing
 
-Agar koi issue hai ya improvement suggest karni hai:
-1. Fork karo repo
-2. Branch banao (`git checkout -b feature/amazing-feature`)
-3. Changes commit karo (`git commit -m 'Add amazing feature'`)
-4. Push karo (`git push origin feature/amazing-feature`)
-5. Pull Request kholo
+If you have issues or want to suggest improvements:
+1. Fork the repository
+2. Create a branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
@@ -526,6 +526,6 @@ This project is for educational and personal use. Commercial use requires permis
 
 ---
 
-**Bhai, ab trading shuru karo! 🚀💰**
+**Ready to start trading! 🚀💰**
 
 Made with ❤️ by Dev Gohil
