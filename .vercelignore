@@ -1,0 +1,52 @@
+# Virtual environments
+venv/
+venv_old/
+env/
+.venv/
+ENV/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sql
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
+
+# Trade data
+trades/
+STOCKDATA/
