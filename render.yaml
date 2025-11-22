@@ -1,0 +1,18 @@
+# Render Blueprint for XAUUSD Trading Bot
+services:
+  - type: web
+    name: xauusd-trading-bot
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: XAUUSD-bot
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn api_server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    healthCheckPath: /api/account
+    autoDeploy: true
