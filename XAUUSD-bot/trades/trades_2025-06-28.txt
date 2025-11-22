@@ -1,0 +1,551 @@
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:33 UTC
+Strategy: judas_swing
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.17
+Stop Loss: 1.17
+Take Profit 1: 1.17
+Take Profit 2: 1.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:34 UTC
+Strategy: judas_swing
+Symbol: AMD
+Type: SELL
+Entry Price: 143.52
+Stop Loss: 144.88
+Take Profit 1: 142.16
+Take Profit 2: 140.80
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $5.44
+- Reward Amount: $5.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:35 UTC
+Strategy: judas_swing
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.37
+Stop Loss: 1.37
+Take Profit 1: 1.37
+Take Profit 2: 1.37
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:36 UTC
+Strategy: judas_swing
+Symbol: EURJPY
+Type: SELL
+Entry Price: 169.47
+Stop Loss: 169.65
+Take Profit 1: 169.28
+Take Profit 2: 169.09
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.75
+- Reward Amount: $0.75
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:37 UTC
+Strategy: judas_swing
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 198.41
+Stop Loss: 198.62
+Take Profit 1: 198.19
+Take Profit 2: 197.98
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.86
+- Reward Amount: $0.86
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:38 UTC
+Strategy: judas_swing
+Symbol: MSFT
+Type: SELL
+Entry Price: 496.00
+Stop Loss: 498.06
+Take Profit 1: 493.94
+Take Profit 2: 491.88
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $8.24
+- Reward Amount: $8.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:38 UTC
+Strategy: judas_swing
+Symbol: US30
+Type: SELL
+Entry Price: 43808.60
+Stop Loss: 43961.91
+Take Profit 1: 43655.29
+Take Profit 2: 43501.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $613.24
+- Reward Amount: $613.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:08:51 UTC
+Strategy: judas_swing
+Symbol: NVDA
+Type: SELL
+Entry Price: 157.46
+Stop Loss: 158.79
+Take Profit 1: 156.13
+Take Profit 2: 154.79
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $5.32
+- Reward Amount: $5.32
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:24 UTC
+Strategy: judas_swing
+Symbol: XAGUSD
+Type: SELL
+Entry Price: 35.97
+Stop Loss: 36.08
+Take Profit 1: 35.85
+Take Profit 2: 35.74
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.45
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:26 UTC
+Strategy: judas_swing
+Symbol: US30
+Type: SELL
+Entry Price: 43808.60
+Stop Loss: 43961.91
+Take Profit 1: 43655.29
+Take Profit 2: 43501.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $613.24
+- Reward Amount: $613.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:29 UTC
+Strategy: judas_swing
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.37
+Stop Loss: 1.37
+Take Profit 1: 1.37
+Take Profit 2: 1.37
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:32 UTC
+Strategy: judas_swing
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 198.41
+Stop Loss: 198.62
+Take Profit 1: 198.19
+Take Profit 2: 197.98
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.86
+- Reward Amount: $0.86
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:35 UTC
+Strategy: judas_swing
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.17
+Stop Loss: 1.17
+Take Profit 1: 1.17
+Take Profit 2: 1.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:38 UTC
+Strategy: judas_swing
+Symbol: EURJPY
+Type: SELL
+Entry Price: 169.47
+Stop Loss: 169.65
+Take Profit 1: 169.28
+Take Profit 2: 169.09
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.75
+- Reward Amount: $0.75
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:40 UTC
+Strategy: judas_swing
+Symbol: USDJPY
+Type: SELL
+Entry Price: 144.63
+Stop Loss: 144.82
+Take Profit 1: 144.43
+Take Profit 2: 144.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.77
+- Reward Amount: $0.77
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:42 UTC
+Strategy: judas_swing
+Symbol: MSFT
+Type: SELL
+Entry Price: 496.00
+Stop Loss: 498.06
+Take Profit 1: 493.94
+Take Profit 2: 491.88
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $8.24
+- Reward Amount: $8.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:44 UTC
+Strategy: judas_swing
+Symbol: XAUUSD
+Type: SELL
+Entry Price: 3274.96
+Stop Loss: 3282.83
+Take Profit 1: 3267.09
+Take Profit 2: 3259.23
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $31.48
+- Reward Amount: $31.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:46 UTC
+Strategy: judas_swing
+Symbol: AMD
+Type: SELL
+Entry Price: 143.52
+Stop Loss: 144.88
+Take Profit 1: 142.16
+Take Profit 2: 140.80
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $5.44
+- Reward Amount: $5.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 07:12:48 UTC
+Strategy: judas_swing
+Symbol: NVDA
+Type: SELL
+Entry Price: 157.46
+Stop Loss: 158.79
+Take Profit 1: 156.13
+Take Profit 2: 154.79
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $5.32
+- Reward Amount: $5.32
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:32 UTC
+Strategy: judas_swing
+Symbol: XAGUSD
+Type: SELL
+Entry Price: 35.97
+Stop Loss: 36.08
+Take Profit 1: 35.85
+Take Profit 2: 35.74
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.45
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:33 UTC
+Strategy: judas_swing
+Symbol: US30
+Type: SELL
+Entry Price: 43808.60
+Stop Loss: 43961.91
+Take Profit 1: 43655.29
+Take Profit 2: 43501.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $613.24
+- Reward Amount: $613.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:34 UTC
+Strategy: judas_swing
+Symbol: USDJPY
+Type: SELL
+Entry Price: 144.63
+Stop Loss: 144.82
+Take Profit 1: 144.43
+Take Profit 2: 144.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.77
+- Reward Amount: $0.77
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:35 UTC
+Strategy: judas_swing
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.37
+Stop Loss: 1.37
+Take Profit 1: 1.37
+Take Profit 2: 1.37
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:36 UTC
+Strategy: judas_swing
+Symbol: EURJPY
+Type: SELL
+Entry Price: 169.47
+Stop Loss: 169.65
+Take Profit 1: 169.28
+Take Profit 2: 169.09
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.75
+- Reward Amount: $0.75
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:37 UTC
+Strategy: judas_swing
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 198.41
+Stop Loss: 198.62
+Take Profit 1: 198.19
+Take Profit 2: 197.98
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.86
+- Reward Amount: $0.86
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:37 UTC
+Strategy: judas_swing
+Symbol: MSFT
+Type: SELL
+Entry Price: 496.00
+Stop Loss: 498.06
+Take Profit 1: 493.94
+Take Profit 2: 491.88
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $8.24
+- Reward Amount: $8.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:38 UTC
+Strategy: judas_swing
+Symbol: XAUUSD
+Type: SELL
+Entry Price: 3274.96
+Stop Loss: 3282.83
+Take Profit 1: 3267.09
+Take Profit 2: 3259.23
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $31.48
+- Reward Amount: $31.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:40 UTC
+Strategy: judas_swing
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.17
+Stop Loss: 1.17
+Take Profit 1: 1.17
+Take Profit 2: 1.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-28 16:33:40 UTC
+Strategy: judas_swing
+Symbol: NVDA
+Type: SELL
+Entry Price: 157.46
+Stop Loss: 158.79
+Take Profit 1: 156.13
+Take Profit 2: 154.79
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $5.32
+- Reward Amount: $5.32
+- Risk/Reward Ratio: 1.00
+==================================================

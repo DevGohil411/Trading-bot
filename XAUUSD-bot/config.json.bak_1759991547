@@ -1,0 +1,122 @@
+{
+  "symbols": [
+    "XAUUSD",
+    "XAGUSD",
+    "GBPJPY",
+    "USDJPY",
+    "EURJPY",
+    "US30",
+    "AMD",
+    "MSFT",
+    "NVDA"
+  ],
+  "timeframe": "TIMEFRAME_M15",
+  "candle_count": 50,
+  "candle_freshness_threshold_seconds": 900,
+  "risk_settings": {
+    "max_daily_loss": 998,
+    "max_daily_profit": 1000,
+    "risk_per_trade": 0.5,
+    "default_lot_size": 0.1,
+    "max_open_trades": 19,
+    "max_daily_trades": 98,
+    "max_slippage": 3,
+    "max_spread": 20,
+    "allow_multiple_trades": true
+  },
+  "trading_sessions": {
+    "enabled": true,
+    "london_session": true,
+    "new_york_session": true,
+    "tokyo_session": true,
+    "sydney_session": false,
+    "enable_trading": true,
+    "london": {
+      "active": false,
+      "start": "08:00",
+      "end": "17:00"
+    },
+    "new_york": {
+      "active": true,
+      "start": "13:00",
+      "end": "22:00"
+    },
+    "asian": {
+      "active": false,
+      "start": "00:00",
+      "end": "09:00"
+    },
+    "custom": {
+      "start": "08:00",
+      "end": "08:03"
+    }
+  },
+  "strategy_filters": {
+    "killzone_filter": true,
+    "news_filter": true,
+    "volatility_filter": true,
+    "trend_filter": true,
+    "llm_sentiment_threshold": 0.7,
+    "ml_filter_threshold": 0.65
+  },
+  "notifications": {
+    "email_notifications": true,
+    "telegram_notifications": true,
+    "trade_alerts": true,
+    "error_alerts": true,
+    "push_notifications": true,
+    "email_alerts": false,
+    "telegram_alerts": true
+  },
+  "advanced_settings": {
+    "max_slippage": 33,
+    "max_spread": 8,
+    "auto_reconnect": true,
+    "emergency_stop": true,
+    "ml_model_path": "models/ml_trade_filter.pkl"
+  },
+  "logging": {
+    "log_dir": "logs",
+    "log_level": "INFO"
+  },
+  "mt5": {
+    "login": 10007121964,
+    "password": "Xs-vWfE0",
+    "server": "MetaQuotes-Demo"
+  },
+  "gemini": {
+    "api_key": "AIzaSyCQP68p8o81mz1LJ_5-_E2IWZ_ZDy-dbIY"
+  },
+  "telegram": {
+    "bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+    "chat_id": "YOUR_TELEGRAM_CHAT_ID"
+  },
+  "bot_active": true,
+  "all_strategies": true,
+  "selected_strategies": [
+    "mmxm",
+    "judas_swing",
+    "ote",
+    "amd_strategy",
+    "msb_retest",
+    "order_block",
+    "mmc_combo_strategy",
+    "mmc"
+  ],
+  "killzone_map": {
+    "mmxm": false,
+    "judas_swing": false,
+    "ote": false,
+    "amd_strategy": false,
+    "msb_retest": false,
+    "order_block": false,
+    "mmc_combo_strategy": false,
+    "mmc": false
+  },
+  "polling_interval_seconds": 60,
+  "killzone": false,
+  "strategy": "mmxm",
+  "news_filter": true,
+  "volatility_filter": true,
+  "trend_filter": false
+}

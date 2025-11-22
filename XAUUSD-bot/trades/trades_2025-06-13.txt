@@ -1,0 +1,57 @@
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-13 05:15:52 UTC
+Strategy: msb_retest
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3425.71
+Stop Loss: 3411.87
+Take Profit 1: 3439.55
+Take Profit 2: 3453.39
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $13.84
+- Reward Amount: $13.84
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-13 05:15:53 UTC
+Strategy: judas_swing
+Symbol: XAUUSD
+Type: SELL
+Entry Price: 3425.52
+Stop Loss: 3439.36
+Take Profit 1: 3411.68
+Take Profit 2: 3397.84
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $13.84
+- Reward Amount: $13.84
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-13 09:54:21 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3425.69
+Stop Loss: 3416.24
+Take Profit 1: 3435.14
+Take Profit 2: 3444.60
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $9.45
+- Reward Amount: $9.45
+- Risk/Reward Ratio: 1.00
+==================================================

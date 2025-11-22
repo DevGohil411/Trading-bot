@@ -1,0 +1,3876 @@
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 03:18:24 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 03:18:25 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 03:26:25 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: BUY
+Entry Price: 1.15
+Stop Loss: 1.14
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 03:45:39 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3374.35
+Stop Loss: 3367.25
+Take Profit 1: 3381.41
+Take Profit 2: 3388.49
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $28.40
+- Reward Amount: $28.24
+- Risk/Reward Ratio: 0.99
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:00:41 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.94
+Stop Loss: 3367.12
+Take Profit 1: 3380.86
+Take Profit 2: 3387.73
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $27.28
+- Reward Amount: $27.68
+- Risk/Reward Ratio: 1.01
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:27:13 UTC
+Strategy: order_block
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.44
+Stop Loss: 194.60
+Take Profit 1: 194.28
+Take Profit 2: 194.11
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.66
+- Reward Amount: $0.66
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:27:14 UTC
+Strategy: order_block
+Symbol: XAGUSD
+Type: SELL
+Entry Price: 36.67
+Stop Loss: 36.78
+Take Profit 1: 36.57
+Take Profit 2: 36.47
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.42
+- Reward Amount: $0.42
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:27:14 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3372.91
+Stop Loss: 3366.17
+Take Profit 1: 3379.65
+Take Profit 2: 3386.38
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $26.96
+- Reward Amount: $26.96
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:27:14 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42115.50
+Stop Loss: 42169.12
+Take Profit 1: 42061.88
+Take Profit 2: 42008.25
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $214.48
+- Reward Amount: $214.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:41:14 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.49
+Stop Loss: 194.62
+Take Profit 1: 194.36
+Take Profit 2: 194.23
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.52
+- Reward Amount: $0.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:41:14 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42117.50
+Stop Loss: 42156.77
+Take Profit 1: 42078.23
+Take Profit 2: 42038.96
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $157.08
+- Reward Amount: $157.08
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:41:24 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.33
+Stop Loss: 166.44
+Take Profit 1: 166.22
+Take Profit 2: 166.11
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:55:17 UTC
+Strategy: amd_strategy
+Symbol: EURJPY
+Type: BUY
+Entry Price: 166.36
+Stop Loss: 166.25
+Take Profit 1: 166.46
+Take Profit 2: 166.57
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.40
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:59:16 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42134.00
+Stop Loss: 42173.54
+Take Profit 1: 42094.46
+Take Profit 2: 42054.93
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $158.16
+- Reward Amount: $158.16
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:59:16 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 04:59:16 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: SELL
+Entry Price: 36.73
+Stop Loss: 36.83
+Take Profit 1: 36.63
+Take Profit 2: 36.53
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.39
+- Reward Amount: $0.39
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:00:26 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.54
+Stop Loss: 194.43
+Take Profit 1: 194.67
+Take Profit 2: 194.79
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.48
+- Reward Amount: $0.50
+- Risk/Reward Ratio: 1.03
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:03:14 UTC
+Strategy: amd_strategy
+Symbol: EURJPY
+Type: BUY
+Entry Price: 166.35
+Stop Loss: 166.25
+Take Profit 1: 166.45
+Take Profit 2: 166.56
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.41
+- Reward Amount: $0.41
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:05:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.49
+Stop Loss: 194.62
+Take Profit 1: 194.37
+Take Profit 2: 194.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.50
+- Reward Amount: $0.50
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:11:14 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.11
+Stop Loss: 145.00
+Take Profit 1: 145.22
+Take Profit 2: 145.33
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:13:16 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:30 UTC
+Strategy: amd_strategy
+Symbol: EURJPY
+Type: BUY
+Entry Price: 166.37
+Stop Loss: 166.28
+Take Profit 1: 166.47
+Take Profit 2: 166.56
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.38
+- Reward Amount: $0.38
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:33 UTC
+Strategy: amd_strategy
+Symbol: EURJPY
+Type: BUY
+Entry Price: 166.37
+Stop Loss: 166.28
+Take Profit 1: 166.47
+Take Profit 2: 166.56
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.37
+- Reward Amount: $0.39
+- Risk/Reward Ratio: 1.07
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:40 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.51
+Stop Loss: 194.40
+Take Profit 1: 194.63
+Take Profit 2: 194.74
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.47
+- Reward Amount: $0.46
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:40 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.51
+Stop Loss: 194.40
+Take Profit 1: 194.63
+Take Profit 2: 194.75
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.47
+- Reward Amount: $0.46
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:41 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42152.71
+Take Profit 1: 42083.29
+Take Profit 2: 42048.57
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $138.84
+- Reward Amount: $138.84
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:41 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.36
+Stop Loss: 166.45
+Take Profit 1: 166.26
+Take Profit 2: 166.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.37
+- Reward Amount: $0.39
+- Risk/Reward Ratio: 1.04
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:41 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.62
+Stop Loss: 3368.78
+Take Profit 1: 3378.38
+Take Profit 2: 3383.19
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.36
+- Reward Amount: $19.04
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:59 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.61
+Stop Loss: 3368.82
+Take Profit 1: 3378.42
+Take Profit 2: 3383.23
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.16
+- Reward Amount: $19.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:15:59 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.51
+Stop Loss: 194.40
+Take Profit 1: 194.63
+Take Profit 2: 194.75
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.48
+- Risk/Reward Ratio: 1.05
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:02 UTC
+Strategy: order_block
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.76
+Stop Loss: 36.67
+Take Profit 1: 36.85
+Take Profit 2: 36.94
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.36
+- Reward Amount: $0.36
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:02 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.36
+Stop Loss: 166.46
+Take Profit 1: 166.26
+Take Profit 2: 166.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.38
+- Reward Amount: $0.38
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:02 UTC
+Strategy: order_block
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.76
+Stop Loss: 36.67
+Take Profit 1: 36.85
+Take Profit 2: 36.94
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.36
+- Reward Amount: $0.36
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:02 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.36
+Stop Loss: 166.46
+Take Profit 1: 166.27
+Take Profit 2: 166.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.38
+- Reward Amount: $0.38
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:02 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $140.84
+- Reward Amount: $136.84
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:02 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $140.84
+- Reward Amount: $136.84
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:02 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.36
+Stop Loss: 166.46
+Take Profit 1: 166.27
+Take Profit 2: 166.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.39
+- Reward Amount: $0.38
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.63
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.20
+- Reward Amount: $19.20
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.36
+Stop Loss: 166.46
+Take Profit 1: 166.26
+Take Profit 2: 166.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.38
+- Reward Amount: $0.39
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $140.84
+- Reward Amount: $136.84
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $140.84
+- Reward Amount: $136.84
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.62
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.16
+- Reward Amount: $19.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $140.84
+- Reward Amount: $136.84
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.63
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.20
+- Reward Amount: $19.20
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $140.84
+- Reward Amount: $136.84
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42118.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $140.84
+- Reward Amount: $136.84
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.62
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.16
+- Reward Amount: $19.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.78
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.80
+- Reward Amount: $18.60
+- Risk/Reward Ratio: 0.94
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.62
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.16
+- Reward Amount: $19.24
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: US30
+Type: SELL
+Entry Price: 42117.00
+Stop Loss: 42153.21
+Take Profit 1: 42083.79
+Take Profit 2: 42049.07
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $144.84
+- Reward Amount: $132.84
+- Risk/Reward Ratio: 0.92
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.63
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.20
+- Reward Amount: $19.20
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.35
+Stop Loss: 166.46
+Take Profit 1: 166.26
+Take Profit 2: 166.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.42
+- Reward Amount: $0.35
+- Risk/Reward Ratio: 0.83
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:03 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.75
+Stop Loss: 3368.83
+Take Profit 1: 3378.43
+Take Profit 2: 3383.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.68
+- Reward Amount: $18.72
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:16:04 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.10
+Stop Loss: 145.20
+Take Profit 1: 145.01
+Take Profit 2: 144.92
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.37
+- Reward Amount: $0.37
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:30:40 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.35
+Stop Loss: 166.43
+Take Profit 1: 166.26
+Take Profit 2: 166.18
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.34
+- Reward Amount: $0.34
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:14 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.46
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.46
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.47
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.46
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.53
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:31:15 UTC
+Strategy: ote
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.52
+Stop Loss: 194.64
+Take Profit 1: 194.41
+Take Profit 2: 194.30
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.47
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:39:29 UTC
+Strategy: amd_strategy
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3373.35
+Stop Loss: 3368.47
+Take Profit 1: 3378.23
+Take Profit 2: 3383.12
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $19.52
+- Reward Amount: $19.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:45:48 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.54
+Stop Loss: 194.44
+Take Profit 1: 194.66
+Take Profit 2: 194.77
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.41
+- Reward Amount: $0.47
+- Risk/Reward Ratio: 1.14
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:45:49 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.54
+Stop Loss: 194.44
+Take Profit 1: 194.66
+Take Profit 2: 194.76
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.42
+- Reward Amount: $0.46
+- Risk/Reward Ratio: 1.10
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:45:59 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.54
+Stop Loss: 194.44
+Take Profit 1: 194.66
+Take Profit 2: 194.76
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.40
+- Reward Amount: $0.48
+- Risk/Reward Ratio: 1.18
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:45:59 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3367.71
+Stop Loss: 3362.70
+Take Profit 1: 3372.74
+Take Profit 2: 3377.75
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $20.04
+- Reward Amount: $20.12
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:45:59 UTC
+Strategy: amd_strategy
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.54
+Stop Loss: 194.43
+Take Profit 1: 194.65
+Take Profit 2: 194.76
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:04 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3367.74
+Stop Loss: 3362.72
+Take Profit 1: 3372.50
+Take Profit 2: 3377.40
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $20.08
+- Reward Amount: $19.04
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:06 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3367.33
+Stop Loss: 3362.61
+Take Profit 1: 3372.71
+Take Profit 2: 3377.75
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $18.88
+- Reward Amount: $21.52
+- Risk/Reward Ratio: 1.14
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:08 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3367.35
+Stop Loss: 3362.31
+Take Profit 1: 3372.35
+Take Profit 2: 3377.36
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $20.16
+- Reward Amount: $20.00
+- Risk/Reward Ratio: 0.99
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:10 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3367.39
+Stop Loss: 3362.32
+Take Profit 1: 3372.40
+Take Profit 2: 3377.44
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $20.28
+- Reward Amount: $20.04
+- Risk/Reward Ratio: 0.99
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:13 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.34
+Stop Loss: 166.42
+Take Profit 1: 166.26
+Take Profit 2: 166.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.33
+- Reward Amount: $0.33
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:23 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.15
+Stop Loss: 145.23
+Take Profit 1: 145.07
+Take Profit 2: 144.98
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.33
+- Reward Amount: $0.33
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:24 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.15
+Stop Loss: 145.23
+Take Profit 1: 145.06
+Take Profit 2: 144.98
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.34
+- Reward Amount: $0.34
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:45 UTC
+Strategy: order_block
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.33
+Stop Loss: 166.42
+Take Profit 1: 166.25
+Take Profit 2: 166.16
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.34
+- Reward Amount: $0.34
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:46:45 UTC
+Strategy: order_block
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.33
+Stop Loss: 166.42
+Take Profit 1: 166.25
+Take Profit 2: 166.16
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.34
+- Reward Amount: $0.34
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:51:34 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:51:34 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: BUY
+Entry Price: 1.15
+Stop Loss: 1.14
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:51:34 UTC
+Strategy: msb_retest
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.25
+Stop Loss: 145.16
+Take Profit 1: 145.34
+Take Profit 2: 145.43
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.37
+- Reward Amount: $0.37
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 05:59:33 UTC
+Strategy: order_block
+Symbol: GBPJPY
+Type: SELL
+Entry Price: 194.35
+Stop Loss: 194.47
+Take Profit 1: 194.22
+Take Profit 2: 194.09
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.51
+- Reward Amount: $0.51
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:00:18 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42055.70
+Stop Loss: 42020.29
+Take Profit 1: 42091.11
+Take Profit 2: 42126.52
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $141.64
+- Reward Amount: $141.64
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:00:19 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42056.20
+Stop Loss: 42020.29
+Take Profit 1: 42091.11
+Take Profit 2: 42126.52
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $143.64
+- Reward Amount: $139.64
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:00:19 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42056.20
+Stop Loss: 42020.79
+Take Profit 1: 42091.61
+Take Profit 2: 42127.02
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $141.64
+- Reward Amount: $141.64
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:00:19 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42056.20
+Stop Loss: 42020.79
+Take Profit 1: 42091.61
+Take Profit 2: 42127.02
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $141.64
+- Reward Amount: $141.64
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:00:19 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42056.20
+Stop Loss: 42020.29
+Take Profit 1: 42091.11
+Take Profit 2: 42126.52
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $143.64
+- Reward Amount: $139.64
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:01:03 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:01:03 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:01:03 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:01:03 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:01:55 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.14
+Stop Loss: 145.25
+Take Profit 1: 145.04
+Take Profit 2: 144.94
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.42
+- Reward Amount: $0.42
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:01:55 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.14
+Stop Loss: 145.25
+Take Profit 1: 145.04
+Take Profit 2: 144.94
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.42
+- Reward Amount: $0.42
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:07:50 UTC
+Strategy: msb_retest
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.23
+Stop Loss: 145.12
+Take Profit 1: 145.34
+Take Profit 2: 145.45
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:15:42 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:05 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42033.20
+Stop Loss: 41994.25
+Take Profit 1: 42072.15
+Take Profit 2: 42111.09
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $155.80
+- Reward Amount: $155.80
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:10 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.19
+Stop Loss: 145.30
+Take Profit 1: 145.08
+Take Profit 2: 144.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:12 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.19
+Stop Loss: 145.30
+Take Profit 1: 145.08
+Take Profit 2: 144.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:12 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42032.70
+Stop Loss: 41994.20
+Take Profit 1: 42072.20
+Take Profit 2: 42111.20
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $154.00
+- Reward Amount: $158.00
+- Risk/Reward Ratio: 1.03
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:14 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42033.70
+Stop Loss: 41993.70
+Take Profit 1: 42071.70
+Take Profit 2: 42110.70
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $160.00
+- Reward Amount: $152.00
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:15 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.47
+Stop Loss: 36.34
+Take Profit 1: 36.57
+Take Profit 2: 36.69
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.51
+- Reward Amount: $0.40
+- Risk/Reward Ratio: 0.80
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:15 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42034.20
+Stop Loss: 41993.70
+Take Profit 1: 42071.70
+Take Profit 2: 42110.70
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $162.00
+- Reward Amount: $150.00
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:17 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42033.70
+Stop Loss: 41993.70
+Take Profit 1: 42071.70
+Take Profit 2: 42110.70
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $160.00
+- Reward Amount: $152.00
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:18 UTC
+Strategy: ote
+Symbol: US30
+Type: BUY
+Entry Price: 42033.70
+Stop Loss: 41993.70
+Take Profit 1: 42071.70
+Take Profit 2: 42110.70
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $160.00
+- Reward Amount: $152.00
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:22 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.18
+Stop Loss: 145.29
+Take Profit 1: 145.07
+Take Profit 2: 144.96
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:28 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.48
+Stop Loss: 36.37
+Take Profit 1: 36.59
+Take Profit 2: 36.71
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.48
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 0.92
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:30 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.49
+Stop Loss: 36.37
+Take Profit 1: 36.60
+Take Profit 2: 36.72
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.48
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 0.92
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:38 UTC
+Strategy: order_block
+Symbol: EURJPY
+Type: BUY
+Entry Price: 166.34
+Stop Loss: 166.25
+Take Profit 1: 166.44
+Take Profit 2: 166.54
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.39
+- Reward Amount: $0.39
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:16:38 UTC
+Strategy: order_block
+Symbol: EURJPY
+Type: BUY
+Entry Price: 166.34
+Stop Loss: 166.25
+Take Profit 1: 166.44
+Take Profit 2: 166.54
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.38
+- Reward Amount: $0.39
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:28 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.33
+Stop Loss: 36.20
+Take Profit 1: 36.46
+Take Profit 2: 36.59
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.52
+- Reward Amount: $0.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:28 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.33
+Stop Loss: 36.20
+Take Profit 1: 36.46
+Take Profit 2: 36.59
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.52
+- Reward Amount: $0.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:31 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.33
+Stop Loss: 36.20
+Take Profit 1: 36.46
+Take Profit 2: 36.59
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.52
+- Reward Amount: $0.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:31 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.33
+Stop Loss: 36.20
+Take Profit 1: 36.46
+Take Profit 2: 36.59
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.52
+- Reward Amount: $0.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:40 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:41 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.33
+Stop Loss: 36.20
+Take Profit 1: 36.46
+Take Profit 2: 36.59
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.53
+- Reward Amount: $0.51
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:41 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: BUY
+Entry Price: 1.15
+Stop Loss: 1.14
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:42 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: BUY
+Entry Price: 1.15
+Stop Loss: 1.14
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:42 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: BUY
+Entry Price: 1.15
+Stop Loss: 1.14
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:45 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: BUY
+Entry Price: 1.15
+Stop Loss: 1.14
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.05
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:30:54 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.41
+Stop Loss: 166.50
+Take Profit 1: 166.31
+Take Profit 2: 166.21
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.38
+- Reward Amount: $0.39
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:31:06 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.28
+Stop Loss: 145.40
+Take Profit 1: 145.17
+Take Profit 2: 145.06
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:31:07 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.28
+Stop Loss: 145.40
+Take Profit 1: 145.17
+Take Profit 2: 145.06
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.47
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:31:07 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.28
+Stop Loss: 145.40
+Take Profit 1: 145.17
+Take Profit 2: 145.06
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.47
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:31:22 UTC
+Strategy: order_block
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.54
+Stop Loss: 194.41
+Take Profit 1: 194.67
+Take Profit 2: 194.80
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.52
+- Reward Amount: $0.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 06:31:23 UTC
+Strategy: order_block
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 194.54
+Stop Loss: 194.41
+Take Profit 1: 194.67
+Take Profit 2: 194.80
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.52
+- Reward Amount: $0.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:00:16 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.56
+Stop Loss: 166.66
+Take Profit 1: 166.45
+Take Profit 2: 166.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.42
+- Reward Amount: $0.42
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:00:21 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.26
+Stop Loss: 145.38
+Take Profit 1: 145.14
+Take Profit 2: 145.02
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.48
+- Reward Amount: $0.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:00:21 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.26
+Stop Loss: 145.38
+Take Profit 1: 145.14
+Take Profit 2: 145.02
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.48
+- Reward Amount: $0.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:00:21 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.26
+Stop Loss: 145.38
+Take Profit 1: 145.14
+Take Profit 2: 145.02
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.48
+- Reward Amount: $0.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:00:26 UTC
+Strategy: ote
+Symbol: USDJPY
+Type: SELL
+Entry Price: 145.24
+Stop Loss: 145.36
+Take Profit 1: 145.12
+Take Profit 2: 145.01
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.50
+- Reward Amount: $0.45
+- Risk/Reward Ratio: 0.90
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:00:46 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:00:52 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:01:10 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.42
+Stop Loss: 36.28
+Take Profit 1: 36.57
+Take Profit 2: 36.71
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.58
+- Reward Amount: $0.57
+- Risk/Reward Ratio: 0.99
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:10:57 UTC
+Strategy: order_block
+Symbol: US30
+Type: SELL
+Entry Price: 42038.50
+Stop Loss: 42086.12
+Take Profit 1: 41990.88
+Take Profit 2: 41943.25
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $190.48
+- Reward Amount: $190.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:15:03 UTC
+Strategy: ote
+Symbol: EURJPY
+Type: SELL
+Entry Price: 166.61
+Stop Loss: 166.72
+Take Profit 1: 166.49
+Take Profit 2: 166.38
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.46
+- Reward Amount: $0.46
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:15:06 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.31
+Stop Loss: 36.16
+Take Profit 1: 36.47
+Take Profit 2: 36.62
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.62
+- Reward Amount: $0.62
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:15:48 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:15:56 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.98
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:30:41 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:30:48 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:30:48 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:31:54 UTC
+Strategy: msb_retest
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.27
+Stop Loss: 145.15
+Take Profit 1: 145.40
+Take Profit 2: 145.53
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.50
+- Reward Amount: $0.51
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:41:15 UTC
+Strategy: order_block
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3367.84
+Stop Loss: 3358.32
+Take Profit 1: 3377.36
+Take Profit 2: 3386.89
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $38.08
+- Reward Amount: $38.08
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:52:44 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.96
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:52:48 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.13
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:52:53 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.07
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:02 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.11
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:05 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.73
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:16 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.83
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:17 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.05
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:24 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.87
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:31 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:33 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.27
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:34 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.76
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:34 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.80
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:37 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.78
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:39 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.78
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:41 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.89
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:42 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.88
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:43 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.67
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:45 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.91
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:50 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:51 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.70
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:55 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:53:57 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.85
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:01 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.02
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:06 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.91
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:08 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.78
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:08 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.92
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:11 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.84
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:13 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.90
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:13 UTC
+Strategy: ote
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.33
+Stop Loss: 36.15
+Take Profit 1: 36.51
+Take Profit 2: 36.69
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.70
+- Reward Amount: $0.74
+- Risk/Reward Ratio: 1.05
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:19 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.87
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:19 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.81
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:24 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.95
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:54:27 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.87
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:55:13 UTC
+Strategy: ote
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.85
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:55:20 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:55:25 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:55:57 UTC
+Strategy: ote
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.25
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 07:58:53 UTC
+Strategy: order_block
+Symbol: EURUSD
+Type: SELL
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.14
+Take Profit 2: 1.14
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:01:59 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:02:07 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:02:09 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.37
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:02:11 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.45
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:02:15 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.35
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:02:17 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: SELL
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.01
+- Reward Amount: $0.01
+- Risk/Reward Ratio: 1.03
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:05:15 UTC
+Strategy: order_block
+Symbol: US30
+Type: BUY
+Entry Price: 42024.20
+Stop Loss: 41955.36
+Take Profit 1: 42093.04
+Take Profit 2: 42161.88
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $275.36
+- Reward Amount: $275.36
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:23:27 UTC
+Strategy: msb_retest
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 195.04
+Stop Loss: 194.84
+Take Profit 1: 195.24
+Take Profit 2: 195.44
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.80
+- Reward Amount: $0.80
+- Risk/Reward Ratio: 1.01
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:32:57 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.36
+Stop Loss: 145.21
+Take Profit 1: 145.50
+Take Profit 2: 145.64
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.59
+- Reward Amount: $0.55
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:33:00 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.36
+Stop Loss: 145.21
+Take Profit 1: 145.50
+Take Profit 2: 145.64
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.59
+- Reward Amount: $0.55
+- Risk/Reward Ratio: 0.93
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:33:09 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.35
+Stop Loss: 145.21
+Take Profit 1: 145.50
+Take Profit 2: 145.64
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.58
+- Reward Amount: $0.57
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:33:10 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.35
+Stop Loss: 145.21
+Take Profit 1: 145.49
+Take Profit 2: 145.64
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.58
+- Reward Amount: $0.56
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:33:10 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.35
+Stop Loss: 145.21
+Take Profit 1: 145.50
+Take Profit 2: 145.64
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.58
+- Reward Amount: $0.57
+- Risk/Reward Ratio: 0.97
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:33:11 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.35
+Stop Loss: 145.21
+Take Profit 1: 145.49
+Take Profit 2: 145.64
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.58
+- Reward Amount: $0.57
+- Risk/Reward Ratio: 0.99
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-19 08:33:12 UTC
+Strategy: order_block
+Symbol: USDJPY
+Type: BUY
+Entry Price: 145.35
+Stop Loss: 145.21
+Take Profit 1: 145.50
+Take Profit 2: 145.64
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.57
+- Reward Amount: $0.57
+- Risk/Reward Ratio: 1.00
+==================================================

@@ -1,0 +1,16 @@
+
+==================================================
+POSITION SL_UPDATED
+==================================================
+Time: 2025-07-18 10:46:58 UTC
+Ticket: 52826494118
+Strategy: 
+Symbol: GBPJPY
+Type: BUY
+Current Price: 199.75
+Open Price: 199.80
+Stop Loss: 0.00
+Take Profit: 0.00
+Profit: $-67.31
+Volume: 2.0
+==================================================

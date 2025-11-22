@@ -1,0 +1,475 @@
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:24:45 UTC
+Strategy: amd_strategy
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3359.51
+Stop Loss: 3352.07
+Take Profit 1: 3366.95
+Take Profit 2: 3374.39
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $29.76
+- Reward Amount: $29.76
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:26:34 UTC
+Strategy: amd_strategy
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.07
+Stop Loss: 35.95
+Take Profit 1: 36.19
+Take Profit 2: 36.31
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.49
+- Reward Amount: $0.49
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:26:35 UTC
+Strategy: order_block
+Symbol: XAGUSD
+Type: SELL
+Entry Price: 36.04
+Stop Loss: 36.16
+Take Profit 1: 35.92
+Take Profit 2: 35.80
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.49
+- Reward Amount: $0.49
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:30:41 UTC
+Strategy: amd_strategy
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3360.21
+Stop Loss: 3353.32
+Take Profit 1: 3367.10
+Take Profit 2: 3373.98
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $27.56
+- Reward Amount: $27.56
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:30:42 UTC
+Strategy: amd_strategy
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3360.21
+Stop Loss: 3353.32
+Take Profit 1: 3367.10
+Take Profit 2: 3373.98
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $27.56
+- Reward Amount: $27.56
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:46:32 UTC
+Strategy: msb_retest
+Symbol: EURJPY
+Type: BUY
+Entry Price: 168.88
+Stop Loss: 168.72
+Take Profit 1: 169.05
+Take Profit 2: 169.22
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.67
+- Reward Amount: $0.67
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:50:32 UTC
+Strategy: amd_strategy
+Symbol: US30
+Type: BUY
+Entry Price: 42064.10
+Stop Loss: 42038.01
+Take Profit 1: 42090.19
+Take Profit 2: 42116.28
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $104.36
+- Reward Amount: $104.36
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 04:50:32 UTC
+Strategy: order_block
+Symbol: US30
+Type: SELL
+Entry Price: 42062.90
+Stop Loss: 42088.99
+Take Profit 1: 42036.81
+Take Profit 2: 42010.72
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $104.36
+- Reward Amount: $104.36
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 05:01:04 UTC
+Strategy: order_block
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.09
+Stop Loss: 36.00
+Take Profit 1: 36.18
+Take Profit 2: 36.27
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.36
+- Reward Amount: $0.36
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 05:01:36 UTC
+Strategy: msb_retest
+Symbol: USDJPY
+Type: BUY
+Entry Price: 147.01
+Stop Loss: 146.83
+Take Profit 1: 147.19
+Take Profit 2: 147.37
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.71
+- Reward Amount: $0.72
+- Risk/Reward Ratio: 1.01
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 05:01:36 UTC
+Strategy: msb_retest
+Symbol: GBPJPY
+Type: BUY
+Entry Price: 197.16
+Stop Loss: 196.95
+Take Profit 1: 197.37
+Take Profit 2: 197.58
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.84
+- Reward Amount: $0.84
+- Risk/Reward Ratio: 1.01
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 05:02:34 UTC
+Strategy: order_block
+Symbol: US30
+Type: BUY
+Entry Price: 42074.10
+Stop Loss: 42049.62
+Take Profit 1: 42098.58
+Take Profit 2: 42123.06
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $97.92
+- Reward Amount: $97.92
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 05:04:35 UTC
+Strategy: order_block
+Symbol: EURUSD
+Type: BUY
+Entry Price: 1.15
+Stop Loss: 1.15
+Take Profit 1: 1.15
+Take Profit 2: 1.15
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 05:16:11 UTC
+Strategy: order_block
+Symbol: GBPUSD
+Type: BUY
+Entry Price: 1.34
+Stop Loss: 1.34
+Take Profit 1: 1.34
+Take Profit 2: 1.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.00
+- Reward Amount: $0.00
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:31:28 UTC
+Strategy: order_block
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.04
+Stop Loss: 35.94
+Take Profit 1: 36.15
+Take Profit 2: 36.26
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.43
+- Reward Amount: $0.43
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:31:28 UTC
+Strategy: order_block
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.04
+Stop Loss: 35.94
+Take Profit 1: 36.15
+Take Profit 2: 36.26
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.43
+- Reward Amount: $0.43
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:31:32 UTC
+Strategy: order_block
+Symbol: US30
+Type: BUY
+Entry Price: 42100.60
+Stop Loss: 42065.78
+Take Profit 1: 42135.42
+Take Profit 2: 42170.24
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $139.28
+- Reward Amount: $139.28
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:46:22 UTC
+Strategy: order_block
+Symbol: US30
+Type: SELL
+Entry Price: 42101.40
+Stop Loss: 42136.11
+Take Profit 1: 42066.69
+Take Profit 2: 42031.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $138.84
+- Reward Amount: $138.84
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:46:29 UTC
+Strategy: order_block
+Symbol: US30
+Type: SELL
+Entry Price: 42101.90
+Stop Loss: 42135.61
+Take Profit 1: 42066.19
+Take Profit 2: 42031.47
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $134.84
+- Reward Amount: $142.84
+- Risk/Reward Ratio: 1.06
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:46:31 UTC
+Strategy: order_block
+Symbol: US30
+Type: SELL
+Entry Price: 42102.90
+Stop Loss: 42137.11
+Take Profit 1: 42067.69
+Take Profit 2: 42032.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $136.84
+- Reward Amount: $140.84
+- Risk/Reward Ratio: 1.03
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:46:31 UTC
+Strategy: order_block
+Symbol: US30
+Type: SELL
+Entry Price: 42102.90
+Stop Loss: 42137.11
+Take Profit 1: 42067.69
+Take Profit 2: 42032.97
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $136.84
+- Reward Amount: $140.84
+- Risk/Reward Ratio: 1.03
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 06:49:23 UTC
+Strategy: msb_retest
+Symbol: XAGUSD
+Type: BUY
+Entry Price: 36.12
+Stop Loss: 36.01
+Take Profit 1: 36.23
+Take Profit 2: 36.34
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $0.44
+- Reward Amount: $0.44
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 14:39:40 UTC
+Strategy: order_block
+Symbol: NVDA
+Type: BUY
+Entry Price: 143.90
+Stop Loss: 143.27
+Take Profit 1: 144.53
+Take Profit 2: 145.17
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $2.52
+- Reward Amount: $2.52
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 14:43:42 UTC
+Strategy: order_block
+Symbol: EURJPY
+Type: SELL
+Entry Price: 169.12
+Stop Loss: 169.38
+Take Profit 1: 168.87
+Take Profit 2: 168.62
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $1.02
+- Reward Amount: $1.01
+- Risk/Reward Ratio: 0.99
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-23 14:56:47 UTC
+Strategy: order_block
+Symbol: US30
+Type: SELL
+Entry Price: 42265.60
+Stop Loss: 42367.46
+Take Profit 1: 42161.74
+Take Profit 2: 42058.89
+Lot Size: 0.04
+
+Risk Analysis:
+- Risk Amount: $407.44
+- Reward Amount: $415.44
+- Risk/Reward Ratio: 1.02
+==================================================

@@ -1,0 +1,1149 @@
+import sys
+import os
+import threading
+import logging
+import logging.handlers
+import time
+import signal
+import json
+import warnings
+from datetime import datetime, timedelta, timezone
+import pytz
+import numpy as np
+import pandas as pd
+import MetaTrader5 as mt5
+import backoff
+import functools
+import traceback
+import csv
+import shutil
+import io
+from collections import defaultdict
+import math # Added missing math import
+
+# Import core strategy components and utilities from `modules` and `utils` if they are not in `file.py`
+from modules.mmc_combo_strategy import MMCXAUUSDStrategy
+from modules.ote import OTEStrategy
+from modules.indicators import calculate_atr, calculate_rsi
+from utils.trade_logger import log_trade_execution
+
+# Import all strategy-related functions, classes, and global variables from file.py
+from file import (
+    active_trades, data_lock, last_trade_candle, partial_trade_tracking_map,
+    send_telegram_alert, get_forex_factory_news, news_filter, MLTradeFilter,
+    mmxm, msb_retest, order_block, amd_strategy, judas_swing, mmc_strategy,
+    check_trade_limits, increment_trade_count, repair_trade_log_csv,
+    find_swing_high_low, find_order_block, calculate_dynamic_lot, fast_trailing_sl,
+    split_lot, calculate_momentum, calculate_liquidity_sl, calculate_tp,
+    validate_lot_size, is_market_open, round_lot, get_dynamic_lot,
+    has_open_trade, has_opposite_trade, get_recent_trade_performance,
+    empty_strategy_result, get_account_equity_for_file_py, process_strategy_signal,
+    is_good_session, # This function was originally in main.py.tmp and was to be moved to file.py
+    SPECIAL_MARKET_HOURS, MAX_PRICE_DIFF_PCT, MAX_TRADES_PER_STRATEGY_PER_SYMBOL_PER_DAY,
+    daily_trade_counts, last_executed_candle_for_strategy, ENABLE_BE_SL, MAX_GLOBAL_OPEN_POSITIONS,
+    log_position_update_to_file, # Ensure this is imported
+    check_equity_curve_protection, # Ensure this is imported
+    check_portfolio_correlation, # Ensure this is imported
+    check_global_risk_limits, # Ensure this is imported
+    get_market_hours # Ensure this is imported
+)
+
+# Initialize basic logger at the very top
+# This needs to be defined BEFORE any `logger.error` or `logger.info` calls.
+logger = None # Initialize logger as None initially
+def setup_logging():
+    global logger # Declare logger as global to modify it
+    try:
+        if not os.path.exists("logs"):
+            os.makedirs("logs")
+        # Remove RotatingFileHandler from main.py to avoid file lock conflicts.
+        # api_server.py already handles streaming stdout/stderr to trade_bot.log.
+        
+        # Force stdout to UTF-8 for Windows console
+        if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        stream_handler = logging.StreamHandler(sys.stdout)
+        
+        # Configure basic logging only with StreamHandler
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+            handlers=[stream_handler]
+        )
+        logger = logging.getLogger('trade_bot')
+        return logger
+    except Exception as e:
+        print(f"Error setting up logging in main.py: {str(e)}")
+        return None
+
+# Set up logging immediately
+logger = setup_logging()
+
+# Global error handler for uncaught exceptions
+def handle_uncaught_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    if logger: # Check if logger is not None before using
+        logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    else:
+        print("Uncaught exception (logger not initialized):", exc_type, exc_value)
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+
+sys.excepthook = handle_uncaught_exception
+
+# --- Input Validation Utilities (These remain in main.py for high-level config validation) ---
+def validate_lot_size(lot): # This is the generic lot size validation
+    min_lot, max_lot = 0.02, 1.0
+    if not isinstance(lot, (int, float)) or lot < min_lot or lot > max_lot:
+        if logger: logger.error(f"Invalid lot size: {lot}. Must be between {min_lot} and {max_lot}.")
+        else: print(f"Invalid lot size: {lot}. Must be between {min_lot} and {max_lot}.")
+        return False
+    return True
+
+def validate_risk_percent(risk):
+    if not isinstance(risk, (int, float)) or risk <= 0 or risk > 10:
+        if logger: logger.error(f"Invalid risk percent: {risk}. Must be >0 and <=10.")
+        else: print(f"Invalid risk percent: {risk}. Must be >0 and <=10.")
+        return False
+    return True
+
+def validate_symbol(symbol, allowed_symbols):
+    if symbol not in allowed_symbols:
+        if logger: logger.error(f"Invalid symbol: {symbol}. Allowed: {allowed_symbols}")
+        else: print(f"Invalid symbol: {symbol}. Allowed: {allowed_symbols}")
+        return False
+    return True
+
+
+# Suppress FutureWarning for pd.concat
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+# File paths (these remain in main.py as they are system-level configs/logs)
+TRADE_TIMES_FILE = "last_trade_times.json"
+TRADE_LOG_FILE = "trades/trade_log.csv"
+ACTIVE_TRADES_FILE = os.path.join("logs", "active_trades.json")
+
+# Global trade counts (remain in main.py for overall bot statistics)
+strategy_trade_counts = defaultdict(lambda: defaultdict(int))
+last_reset_date = ""
+# MAX_GLOBAL_DRAWDOWN_PCT removed as the feature is disabled.
+
+# Thread-safe dictionaries - active_trades, data_lock, partial_trade_tracking_map are imported from file.py
+# last_trade_times is main.py's global, as load/save are handled here.
+last_trade_times = {}
+last_trade_day = datetime.now(pytz.UTC).date()
+
+
+# --- Position Correlation Check (Remains in main.py as it's a high-level portfolio check) ---
+CORRELATED_SYMBOLS = [
+    {"XAUUSD", "XAUEUR"},
+    {"USDJPY", "GBPJPY"},
+    {"US30", "SPX500"},
+    # Add more correlated sets as needed
+]
+def is_correlated(symbol1, symbol2):
+    for group in CORRELATED_SYMBOLS:
+        if symbol1 in group and symbol2 in group:
+            return True
+    return False
+
+def check_position_correlation(symbol):
+    with data_lock: # Uses imported data_lock
+        for trade in active_trades.values(): # Uses imported active_trades
+            open_symbol = trade.get('symbol')
+            if open_symbol and is_correlated(symbol, open_symbol):
+                logger.warning(f"Correlation block: {symbol} is correlated with open {open_symbol}")
+                return False
+    return True
+
+# --- Max Daily Loss/Drawdown & Max Trades per Day/Symbol (Remain in main.py for overall bot statistics) ---
+DAILY_PNL_FILE = 'logs/daily_pnl.json'
+TRADE_COUNT_FILE = 'logs/daily_trade_count.json'
+
+def get_today():
+    return datetime.now(pytz.UTC).strftime('%Y-%m-%d')
+
+def load_daily_pnl():
+    if os.path.exists(DAILY_PNL_FILE):
+        with open(DAILY_PNL_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_daily_pnl(pnl_dict):
+    with open(DAILY_PNL_FILE, 'w') as f:
+        json.dump(pnl_dict, f)
+
+def update_daily_pnl(pnl):
+    pnl_dict = load_daily_pnl()
+    today = get_today()
+    pnl_dict[today] = pnl_dict.get(today, 0) + pnl
+    save_daily_pnl(pnl_dict)
+
+def get_daily_pnl():
+    pnl_dict = load_daily_pnl()
+    today = get_today()
+    return pnl_dict.get(today, 0)
+
+def load_trade_count():
+    if os.path.exists(TRADE_COUNT_FILE):
+        with open(TRADE_COUNT_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_trade_count(count_dict):
+    with open(TRADE_COUNT_FILE, 'w') as f:
+        json.dump(count_dict, f)
+
+# This increment_trade_count is for main.py's daily count, distinct from file.py's
+# It was already used in check_max_trades_per_day
+def increment_trade_count_main_py(symbol):
+    count_dict = load_trade_count()
+    today = get_today()
+    if today not in count_dict:
+        count_dict[today] = {}
+    count_dict[today][symbol] = count_dict[today].get(symbol, 0) + 1
+    save_trade_count(count_dict)
+
+def get_trade_count(symbol):
+    count_dict = load_trade_count()
+    today = get_today()
+    return count_dict.get(today, {}).get(symbol, 0)
+
+def check_max_daily_loss(max_loss_limit):
+    current_daily_pnl = get_daily_pnl()
+    if current_daily_pnl < -abs(max_loss_limit): # Check if current loss exceeds limit
+        if logger: logger.warning(f"Daily loss limit of -{max_loss_limit}$ reached. Current daily PnL: {current_daily_pnl}$.")
+        return True
+    return False
+
+def check_max_trades_per_day(symbol, max_trades_limit):
+    current_trade_count = get_trade_count(symbol)
+    if current_trade_count >= max_trades_limit:
+        if logger: logger.warning(f"Max trades per day ({max_trades_limit}) reached for {symbol}. Current trades: {current_trade_count}.")
+        return True
+    return False
+
+# Load config (remains in main.py)
+def load_config():
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+            allowed_symbols = config.get("symbols", [])
+            # Validate symbols AFTER logger is ensured and validation functions are defined
+            for symbol in allowed_symbols:
+                if not validate_symbol(symbol, allowed_symbols):
+                    # Log specific symbol error, but continue loading config if possible
+                    pass # validate_symbol already logs/prints
+            logger.info("Config loaded successfully")
+            return config
+    except FileNotFoundError:
+        if logger: logger.error("Config file not found. Using default config.")
+        else: print("Config file not found. Using default config.")
+        default_config = {
+            "symbols": ["XAUUSD"],
+            "timeframe": "TIMEFRAME_M15",
+            "candle_count": 50,
+            "risk_settings": {
+                "max_daily_trades": 10,
+                "max_drawdown_pct": 0.1,
+                "allow_multiple_trades": False,
+                "max_daily_loss": 1000 # Add default for new setting
+            },
+            "logging": {
+                "log_dir": "logs",
+                "log_level": "INFO"
+            },
+            "mt5": {
+                "login": 5036996416,
+                "password": "6kZs-oPr",
+                "server": "MetaQuotes-Demo"
+            }
+        }
+        with open('config.json', 'w') as f:
+            json.dump(default_config, f, indent=4)
+        return default_config
+    except Exception as e:
+        if logger: logger.error(f"Error loading config: {str(e)}. Using default config.")
+        else: print(f"Error loading config: {str(e)}. Using default config.")
+        return {
+            "symbols": ["XAUUSD"],
+            "timeframe": "TIMEFRAME_M15",
+            "candle_count": 50,
+            "risk_settings": {
+                "max_daily_trades": 20,
+                "max_drawdown_pct": 0.1,
+                "allow_multiple_trades": False,
+                "max_daily_loss": 1000 # Add default for new setting
+            },
+            "logging": {
+                "log_dir": "logs",
+                "log_level": "INFO"
+            },
+            "mt5": {
+                "login": 5036996416,
+                "password": "6kZs-oPr",
+                "server": "MetaQuotes-Demo"
+            }
+        }
+
+# Signal handler (remains in main.py for graceful shutdown)
+def signal_handler(sig, frame):
+    if logger: logger.info("Received shutdown signal. Saving state and shutting down MT5...")
+    else: print("Received shutdown signal. Saving state and shutting down MT5...")
+    save_last_trade_times() # Uses imported partial_trade_tracking_map
+    save_active_trades() # Uses imported active_trades, data_lock
+    mt5.shutdown()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+# Load/Save trade times (remain in main.py, manage overall state)
+def load_last_trade_times():
+    global last_trade_times # This is main's global.
+    if os.path.exists(TRADE_TIMES_FILE):
+        try:
+            with open(TRADE_TIMES_FILE, 'r') as f:
+                data = json.load(f)
+                with data_lock: # Uses imported data_lock
+                    if 'last_trade_times' in data:
+                        last_trade_times.update({
+                            strategy: datetime.fromisoformat(timestamp).replace(tzinfo=pytz.UTC)
+                            for strategy, timestamp in data['last_trade_times'].items()
+                        })
+                    if 'partial_trade_tracking_map' in data: # Uses imported partial_trade_tracking_map
+                        partial_trade_tracking_map.update(data['partial_trade_tracking_map'])
+            if logger: logger.info(f"Loaded last trade times: {last_trade_times}, Partial tracking: {partial_trade_tracking_map}")
+            else: print(f"Loaded last trade times: {last_trade_times}, Partial tracking: {partial_trade_tracking_map}")
+        except Exception as e:
+            if logger: logger.error(f"Error loading last trade times: {str(e)}")
+            else: print(f"Error loading last trade times: {str(e)}")
+
+def save_last_trade_times():
+    try:
+        os.makedirs(os.path.dirname(TRADE_TIMES_FILE) or '.', exist_ok=True)
+        with data_lock: # Uses imported data_lock
+            data_to_save = {
+                'last_trade_times': {strategy: timestamp.isoformat() for strategy, timestamp in last_trade_times.items()},
+                'partial_trade_tracking_map': partial_trade_tracking_map # Uses imported partial_trade_tracking_map
+            }
+        with open(TRADE_TIMES_FILE, 'w') as f:
+            json.dump(data_to_save, f)
+        if logger: logger.debug(f"Saved last trade times: {data_to_save}")
+        else: print(f"Saved last trade times: {data_to_save}")
+    except Exception as e:
+        if logger: logger.error(f"Error saving last trade times: {str(e)}")
+        else: print(f"Error saving last trade times: {str(e)}")
+
+# Load/Save active trades (these call the functions imported from file.py)
+def load_active_trades():
+    # active_trades and data_lock are now imported.
+    # The actual logic is in `save_active_trades_for_file_py` in `file.py`
+    if os.path.exists(ACTIVE_TRADES_FILE):
+        try:
+            with open(ACTIVE_TRADES_FILE, 'r') as f:
+                data = json.load(f)
+                with data_lock: # Uses imported data_lock
+                    active_trades.update({int(ticket): trade_info for ticket, trade_info in data.items()}) # Uses imported active_trades
+            if logger: logger.info(f"Loaded active trades: {active_trades}")
+            else: print(f"Loaded active trades: {active_trades}")
+        except Exception as e:
+            if logger: logger.error(f"Error loading active trades: {str(e)}")
+            else: print(f"Error loading active trades: {str(e)}")
+
+def save_active_trades():
+    # active_trades and data_lock are now imported.
+    # The actual logic is in `save_active_trades_for_file_py` in `file.py`
+    try:
+        os.makedirs(os.path.dirname(ACTIVE_TRADES_FILE) or '.', exist_ok=True)
+        with data_lock: # Uses imported data_lock
+            # Convert datetime objects to string for JSON serialization
+            serializable_active_trades = {
+                ticket: {
+                    k: v.isoformat() if isinstance(v, datetime) else v
+                    for k, v in trade_info.items() # Uses imported active_trades
+                }
+                for ticket, trade_info in active_trades.items() # Uses imported active_trades
+            }
+            with open(ACTIVE_TRADES_FILE, 'w') as f:
+                json.dump(serializable_active_trades, f, indent=4)
+            if logger: logger.debug(f"Saved active trades: {active_trades}")
+            else: print(f"Saved active trades: {active_trades}")
+    except Exception as e:
+        if logger: logger.error(f"Error saving active trades: {str(e)}")
+        else: print(f"Error saving active trades: {str(e)}")
+
+
+# Check risk limits (remains in main.py, calls file.py functions if needed)
+def check_risk_limits(config, equity):
+    try:
+        logger.info(f"Checking risk limits with equity: {equity}")
+        # --- DISABLED DRAWDOWN CHECK AS PER USER REQUEST ---\
+        logger.info("Risk limits check passed (Drawdown check disabled).")
+        return True # Always pass for now
+    except Exception as e:
+        logger.error(f"Error checking risk limits: {str(e)}. Skipping risk check.")
+        return True # Return True to not block trades
+
+# Check open positions (remains in main.py, part of high-level control)
+def check_open_positions(symbol, allow_multiple_trades):
+    try:
+        positions = mt5.positions_get(symbol=symbol)
+        if positions is None:
+            logger.error(f"Failed to fetch positions for {symbol}")
+            return True
+        if len(positions) > 0:
+            position_details = [{"ticket": pos.ticket, "type": "BUY" if pos.type == mt5.ORDER_TYPE_BUY else "SELL"} for pos in positions]
+            logger.info(f"{len(positions)} open positions detected for {symbol}: {position_details}")
+            if not allow_multiple_trades:
+                logger.info("Multiple trades not allowed, skipping new trades.")
+                return False
+            logger.info("Multiple trades allowed, proceeding with trade checks.")
+            return True
+        logger.info(f"No open positions for {symbol}. Proceeding with trade checks.")
+        return True
+    except Exception as e:
+        logger.error(f"Error in check_open_positions: {str(e)}")
+        return True
+
+# Helper indicator/pattern functions (remain in main.py as they feed into manage_open_positions)
+def is_bearish_engulfing(df):
+    if len(df) < 2:
+        return False
+    prev = df.iloc[-2]
+    curr = df.iloc[-1]
+    return (
+        prev['close'] > prev['open'] and
+        curr['close'] < curr['open'] and
+        curr['open'] > prev['close'] and
+        curr['close'] < prev['open']
+    )
+
+def is_bullish_engulfing(df):
+    if len(df) < 2:
+        return False
+    prev = df.iloc[-2]
+    curr = df.iloc[-1]
+    return (
+        prev['close'] < prev['open'] and
+        curr['close'] > curr['open'] and
+        curr['open'] < prev['close'] and
+        curr['close'] > prev['open']
+    )
+
+def is_bos_choch(df, direction):
+    # Simple structure break: new LL for buy, new HH for sell
+    if len(df) < 3:
+        return False
+    if direction == 'buy':
+        return df['low'].iloc[-1] < min(df['low'].iloc[-3:-1])
+    else:
+        return df['high'].iloc[-1] > max(df['high'].iloc[-3:-1])
+
+def is_swing_break(df, entry, direction):
+    swing_highs, swing_lows = find_swing_high_low(df) # Uses imported find_swing_high_low
+    if direction == 'buy' and swing_lows:
+        last_swing = swing_lows[-1][1]
+        return df['low'].iloc[-1] < last_swing < entry
+    elif direction == 'sell' and swing_highs:
+        last_swing = swing_highs[-1][1]
+        return df['high'].iloc[-1] > last_swing > entry
+    return False
+
+def is_volume_reversal(df, direction):
+    if 'tick_volume' not in df.columns or len(df) < 2:
+        return False
+    prev = df.iloc[-2]
+    curr = df.iloc[-1]
+    vol_drop = curr['tick_volume'] < prev['tick_volume'] * 0.7
+    strong_opp = (curr['close'] < curr['open'] if direction == 'buy' else curr['close'] > curr['open'])
+    return vol_drop and strong_opp
+
+# Patch manage_open_positions for advanced reversal detection (remains in main.py)
+def manage_open_positions(symbol, atr):
+    try:
+        # Assuming ensure_mt5_connection is reliable in main.py's context.
+        if not mt5.initialize(): # Re-initialize if not already
+            logger.error("MT5 initialization failed in manage_open_positions.")
+            return
+
+        positions = mt5.positions_get(symbol=symbol)
+        if positions is None:
+            return
+        df, _ = fetch_candles(symbol, mt5.TIMEFRAME_M15, 50) # fetch_candles is in main.py
+        if df is None:
+            logger.warning("No price data for trailing SL management.")
+            return
+
+        swing_highs, swing_lows = find_swing_high_low(df) # Uses imported find_swing_high_low
+        for pos in positions:
+            order_type = pos.type
+            entry = pos.price_open
+            sl = pos.sl
+            direction = 'buy' if order_type == mt5.ORDER_TYPE_BUY else 'sell'
+
+            # Calculate TP levels based on new RRs (1:1, 2:1, 3:1)
+            risk = abs(entry - sl)
+            tp1_level = entry + risk * 1.0 if direction == 'buy' else entry - risk * 1.0
+            tp2_level = entry + risk * 2.0 if direction == 'buy' else entry - risk * 2.0
+            tp3_level = entry + risk * 3.0 if direction == 'buy' else entry - risk * 3.0
+
+            # Current price
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                continue
+            current_price = tick.bid if direction == 'buy' else tick.ask
+
+            # --- Reversal Detection Logic ---
+            reversal_detected = False
+            if direction == 'buy':
+                last_swing_low = min([x[1] for x in swing_lows[-3:]]) if swing_lows else None
+                last_ob_low = find_order_block(df, 'buy') # Uses imported find_order_block
+                if (last_swing_low and current_price < last_swing_low - 0.5 * atr) or \
+                   (last_ob_low and current_price < last_ob_low - 0.5 * atr):
+                    reversal_detected = True
+            else: # sell
+                last_swing_high = max([x[1] for x in swing_highs[-3:]]) if swing_highs else None
+                last_ob_high = find_order_block(df, 'sell') # Uses imported find_order_block
+                if (last_swing_high and current_price > last_swing_high + 0.5 * atr) or \
+                   (last_ob_high and current_price > last_ob_high + 0.5 * atr):
+                    reversal_detected = True
+
+            if reversal_detected:
+                logger.warning(f"[REVERSAL DETECTED] Closing trade {pos.ticket} for {symbol} due to reversal. Closing at cost or near cost.")
+                request = {
+                    "action": mt5.TRADE_ACTION_CLOSE,
+                    "position": pos.ticket,
+                    "symbol": symbol,
+                    "volume": pos.volume,
+                    "price": current_price,
+                    "deviation": 20,
+                    "comment": f"Closed by reversal for {pos.comment}"
+                }
+                result = mt5.order_send(request)
+                if result.retcode == mt5.TRADE_RETCODE_DONE:
+                    logger.info(f"[SUCCESS] Position {pos.ticket} closed by reversal.")
+                    log_position_update_to_file(pos, update_type="CLOSED_REVERSAL") # Uses imported log_position_update_to_file
+                    if pos.ticket in active_trades: # Uses imported active_trades
+                        del active_trades[pos.ticket]
+                else:
+                    logger.error(f"[ERROR] Failed to close position {pos.ticket} by reversal: {result.comment}")
+                continue # Move to next position
+
+            # --- Always check and update trailing SL for every open position ---
+            new_sl = fast_trailing_sl(symbol, pos, direction, swing_highs, swing_lows, atr) # Uses imported fast_trailing_sl
+            # Only update SL if new SL is better (locks in more profit)
+            if (direction == 'buy' and new_sl > sl) or (direction == 'sell' and new_sl < sl):
+                logger.info(f"[TRAILING SL] {direction.upper()} {pos.ticket}: Fast trail SL from {sl:.5f} to {new_sl:.5f} (all trades, all lots, all symbols)")
+                request = {
+                    "action": mt5.TRADE_ACTION_SLTP,
+                    "position": pos.ticket,
+                    "symbol": symbol,
+                    "sl": new_sl,
+                    "tp": pos.tp
+                }
+                result = mt5.order_send(request)
+                if result.retcode == mt5.TRADE_RETCODE_DONE:
+                    logger.info(f"[SUCCESS] Trailing stop updated for {direction.upper()} position {pos.ticket}")
+                    log_position_update_to_file(pos, update_type="SL_UPDATED") # Uses imported log_position_update_to_file
+                else:
+                    logger.error(f"[ERROR] Failed to update trailing SL for {pos.ticket}: {result.comment}")
+
+    except Exception as e:
+        logger.error(f"Error in manage_open_positions: {str(e)}", exc_info=True)
+
+# Common functions
+def get_account_equity():
+    return get_account_equity_for_file_py() # Calls imported function
+
+def calculate_dynamic_risk(equity, atr, sl_points, symbol, strategy):
+    # Dynamic risk: reduce risk % if recent losses
+    base_risk_pct = 1.0
+    wins, losses = get_recent_trade_performance(symbol, strategy, lookback=5) # Uses imported get_recent_trade_performance
+    if losses >= 3:
+        risk_pct = max(0.5, base_risk_pct * 0.5)  # Reduce risk by half
+        logger.info(f"Dynamic risk reduced due to {losses} recent losses: {risk_pct}%.")
+    else:
+        risk_pct = base_risk_pct
+    return risk_pct
+
+
+def analyze_market_conditions(symbol, df):
+    try:
+        df['SMA20'] = df['close'].rolling(window=20).mean()
+        df['SMA50'] = df['close'].rolling(window=50).mean()
+        df['RSI'] = calculate_rsi(df['close'])
+        current_price = df['close'].iloc[-1]
+        current_rsi = df['RSI'].iloc[-1]
+        current_sma20 = df['SMA20'].iloc[-1]
+        current_sma50 = df['SMA50'].iloc[-1]
+        market_conditions = {
+            'trend': 'BULLISH' if current_sma20 > current_sma50 else 'BEARISH',
+            'rsi_condition': 'OVERBOUGHT' if current_rsi > 70 else 'OVERSOLD' if current_rsi < 30 else 'NEUTRAL',
+            'price_vs_sma20': 'ABOVE' if current_price > current_sma20 else 'BELOW',
+            'volatility': 'HIGH' if df['close'].pct_change().std() > 0.002 else 'LOW'
+        }
+        logger.info(f"Market Analysis for {symbol}:\n  * Trend: {market_conditions['trend']}\n  * RSI: {current_rsi:.2f} ({market_conditions['rsi_condition']})\n  * Price vs SMA20: {market_conditions['price_vs_sma20']}\n  * Volatility: {market_conditions['volatility']}")
+        return market_conditions
+    except Exception as e:
+        logger.error(f"Error analyzing market conditions: {str(e)}")
+        return None
+
+def track_strategy_performance():
+    try:
+        csv_file = "trades/trade_log.csv"
+        
+        # Try to read CSV with error handling
+        try:
+            df = pd.read_csv(csv_file, on_bad_lines='skip')
+        except pd.errors.ParserError as e:
+            logger.error(f"CSV parsing error: {str(e)}. Attempting to repair...")
+            # Try to repair the CSV
+            repair_trade_log_csv() # Uses imported repair_trade_log_csv
+            try:
+                df = pd.read_csv(csv_file, on_bad_lines='skip')
+            except Exception as e2:
+                logger.error(f"Failed to read CSV even after repair: {str(e2)}")
+                return
+        
+        if df.empty:
+            logger.info("No trade data available for performance tracking")
+            return
+        
+        # Ensure required columns exist
+        required_columns = ['Win/Loss', 'Profit', 'Strategy']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            logger.error(f"Missing required columns in CSV: {missing_columns}")
+            return
+        
+        # Filter out rows with empty Win/Loss or Profit
+        df_clean = df.dropna(subset=['Win/Loss', 'Profit'])
+        df_clean = df_clean[df_clean['Win/Loss'].isin(['WIN', 'LOSS'])]
+        
+        if df_clean.empty:
+            logger.info("No completed trades found for performance tracking")
+            return
+        
+        # Convert Profit to numeric, handling any non-numeric values
+        df_clean['Profit'] = pd.to_numeric(df_clean['Profit'], errors='coerce')
+        df_clean = df_clean.dropna(subset=['Profit'])
+        
+        if df_clean.empty:
+            logger.info("No valid profit data found for performance tracking")
+            return
+        
+        performance = {
+            'total_trades': len(df_clean),
+            'winning_trades': len(df_clean[df_clean['Win/Loss'] == 'WIN']),
+            'losing_trades': len(df_clean[df_clean['Win/Loss'] == 'LOSS']),
+            'total_profit': df_clean['Profit'].sum(),
+            'average_profit': df_clean['Profit'].mean(),
+            'max_profit': df_clean['Profit'].max(),
+            'max_loss': df_clean['Profit'].min(),
+            'win_rate': (len(df_clean[df_clean['Win/Loss'] == 'WIN']) / len(df_clean) * 100) if len(df_clean) > 0 else 0
+        }
+        
+        strategy_performance = df_clean.groupby('Strategy').agg({
+            'Profit': ['count', 'sum', 'mean'],
+            'Win/Loss': lambda x: (x == 'WIN').mean() * 100
+        }).round(2)
+        
+        logger.info(f"\nStrategy Performance Report:")
+        logger.info(f"  * Total Trades: {performance['total_trades']}")
+        logger.info(f"  * Win Rate: {performance['win_rate']:.2f}%")
+        logger.info(f"  * Total Profit: ${performance['total_profit']:.2f}")
+        logger.info(f"  * Average Profit: ${performance['average_profit']:.2f}")
+        logger.info(f"  * Max Profit: ${performance['max_profit']:.2f}")
+        logger.info(f"  * Max Loss: ${performance['max_loss']:.2f}")
+        
+        logger.info(f"\nStrategy-wise Performance:")
+        logger.info(strategy_performance)
+        
+    except Exception as e:
+        logger.error(f"Error tracking strategy performance: {str(e)}")
+
+# Ensure MT5 credentials are loaded from config
+try:
+    config = load_config()
+    LOGIN = config["mt5"]["login"]
+    PASSWORD = config["mt5"]["password"]
+    SERVER = config["mt5"]["server"]
+except Exception as e:
+    LOGIN = PASSWORD = SERVER = None
+    logger.error(f"Could not load MT5 credentials from config: {str(e)}")
+
+def ensure_mt5_connection(max_retries=5, delay=10):
+    """Ensure MT5 connection is active and working properly"""
+    for attempt in range(max_retries):
+        try:
+            if not mt5.initialize():
+                logger.error(f"MT5 initialization failed. Attempt {attempt + 1}/{max_retries}")
+                time.sleep(delay)
+                continue
+                
+            # Test connection by getting account info
+            account_info = mt5.account_info()
+            if account_info is None:
+                logger.error(f"Failed to get account info. Attempt {attempt + 1}/{max_retries}")
+                mt5.shutdown()
+                time.sleep(delay)
+                continue
+                
+            # Test market data access
+            symbol_info = mt5.symbol_info("XAUUSD")
+            if symbol_info is None:
+                logger.error(f"Failed to get symbol info. Attempt {attempt + 1}/{max_retries}")
+                mt5.shutdown()
+                time.sleep(delay)
+                continue
+                
+            logger.info("MT5 connection ensured.")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ensuring MT5 connection: {str(e)}. Attempt {attempt + 1}/{max_retries}")
+            try:
+                mt5.shutdown()
+            except:
+                pass
+            time.sleep(delay)
+            
+    logger.error("Failed to ensure MT5 connection after all attempts")
+    return False
+
+
+@backoff.on_exception(backoff.expo, Exception, max_tries=3)
+def fetch_candles(symbol, timeframe, count):
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if not ensure_mt5_connection():
+                logger.error("MT5 not connected. Aborting fetch_candles.")
+                time.sleep(10)
+                continue
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None or not symbol_info.visible:
+                if not mt5.symbol_select(symbol, True):
+                    logger.error(f"Symbol {symbol} not found in Market Watch.")
+                    time.sleep(10)
+                    continue
+                symbol_info = mt5.symbol_info(symbol)
+                if symbol_info is None:
+                    logger.error(f"Symbol {symbol} still not available after selection.")
+                    time.sleep(10)
+                    continue
+
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None or tick.bid == 0 or tick.ask == 0:
+                logger.warning(f"No valid quotes for {symbol}. Market may be closed or disconnected. Attempt {attempt+1}/{max_retries}")
+                time.sleep(30 if attempt == max_retries-1 else 10)
+                continue
+
+            # Log broker/server time for debugging
+            if tick:
+                logger.info(f"Broker server time: {datetime.fromtimestamp(tick.time, timezone.utc)} (UTC)")
+            else:
+                logger.warning("Could not fetch broker server time.")
+
+            # Always fetch the most recent candles
+            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+            if rates is None or len(rates) == 0:
+                logger.warning(f"Failed to fetch candles for {symbol}. Attempt {attempt+1}/{max_retries}")
+                time.sleep(10)
+                continue
+
+            df = pd.DataFrame(rates)
+            df['time'] = pd.to_datetime(df['time'], unit='s', utc=True)
+            for col in ['open', 'high', 'low', 'close', 'tick_volume']:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            if df[['open', 'high', 'low', 'close']].isnull().any().any():
+                logger.warning(f"DataFrame contains NaN values in price columns for {symbol}. Attempt {attempt+1}/{max_retries}")
+                time.sleep(10)
+                continue
+            prices = df['close'].to_numpy(dtype=np.float64)
+            latest_candle_time = df['time'].iloc[-1]
+            logger.info(f"Fetched {len(prices)} candles for {symbol}. Latest candle time: {latest_candle_time}, Latest price: {prices[-1]:.2f}")
+            return df, prices
+        except Exception as e:
+            logger.error(f"Error fetching candles (attempt {attempt+1}/{max_retries}): {str(e)}")
+            time.sleep(10)
+    logger.error(f"[FATAL] Could not fetch fresh candles for {symbol} after {max_retries} attempts. Will retry next cycle.")
+    return None
+
+
+def is_symbol_market_open(symbol, now_utc=None):
+    """Return True if the symbol is in its defined trading session or not restricted."""
+    if now_utc is None:
+        now_utc = datetime.now(timezone.utc)
+    # Weekend check (Sat/Sun): most brokers closed
+    if now_utc.weekday() == 5 or now_utc.weekday() == 6:
+        return False
+    # Use robust helper from file.py
+    hours = get_market_hours(symbol)
+    start_h, start_m = map(int, hours["start"].split(":"))
+    end_h, end_m = map(int, hours["end"].split(":"))
+    session_start = now_utc.replace(hour=start_h, minute=start_m, second=0, microsecond=0)
+    session_end = now_utc.replace(hour=end_h, minute=end_m, second=0, microsecond=0)
+    return session_start <= now_utc <= session_end
+
+
+def run_strategy_for_symbol(symbol, timeframe, count, strategies, config):
+    # global last_executed_candle_for_strategy # This is imported from file.py
+    allow_multiple_trades = config["risk_settings"].get("allow_multiple_trades", False)
+    tf_map = {
+        mt5.TIMEFRAME_M1: 1,
+        mt5.TIMEFRAME_M5: 5,
+        mt5.TIMEFRAME_M15: 15,
+        mt5.TIMEFRAME_M30: 30,
+        mt5.TIMEFRAME_H1: 60,
+        mt5.TIMEFRAME_H4: 240,
+        mt5.TIMEFRAME_D1: 1440
+    }
+    strategy_priority = {
+        "judas_swing": 1,
+        "mmxm": 1,
+        "amd_strategy": 2,
+        "mmc": 2,
+        "mmc_combo_strategy": 2,
+        "ote": 3,
+        "order_block": 3,
+        "msb_retest": 3
+    }
+    last_candle_time = None
+    stuck_candle_counter = 0
+    # --- PATCH: Add warning suppression flags ---
+    global_warning_flags = {
+        'max_trades': False,
+        'global_risk': False
+    }
+    while True:
+        try:
+            cycle_start_time = time.time()
+            cycle_start_datetime = datetime.now(timezone.utc)
+            logger.info(f"\n{'='*50}")
+            logger.info(f"NEW CYCLE STARTED")
+            logger.info(f"Time: {cycle_start_datetime.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+            logger.info(f"Symbol: {symbol}")
+            logger.info(f"{'='*50}")
+            # Fetch candle data
+            data = fetch_candles(symbol, timeframe, count)
+            if data is None or not isinstance(data, tuple) or len(data) != 2:
+                logger.error(f"No price data for {symbol}. Skipping this cycle...")
+                time.sleep(60)
+                continue
+            df, prices = data
+            if hasattr(df, 'empty') and df.empty:
+                logger.error(f"DataFrame empty for {symbol}. Skipping this cycle...")
+                time.sleep(60)
+                continue
+            latest_candle_close = prices[-1]
+            latest_candle_time = df['time'].iloc[-1]
+            # Fetch real-time price and tick time
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None or tick.bid == 0 or tick.ask == 0:
+                logger.error(f"Failed to fetch real-time tick data for {symbol}. Skipping this cycle...")
+                time.sleep(60)
+                continue
+            tick_time_utc = datetime.fromtimestamp(tick.time, timezone.utc)
+            live_price = tick.ask if symbol == "XAUUSD" else tick.bid
+            logger.info(f"Last candle time: {latest_candle_time}, Tick time: {tick_time_utc}, Previous candle: {last_candle_time}")
+            logger.info(f"Price Data for {symbol}:\n  * Live Price: {live_price:.2f}\n  * Latest Candle Close: {latest_candle_close:.2f}")
+            price_diff_pct = abs(live_price - latest_candle_close) / latest_candle_close * 100
+            logger.info(f"  * Price Diff %: {price_diff_pct:.2f}%. Max allowed: {MAX_PRICE_DIFF_PCT:.2f}%") # Uses imported MAX_PRICE_DIFF_PCT
+            if price_diff_pct > MAX_PRICE_DIFF_PCT: # Uses imported MAX_PRICE_DIFF_PCT
+                logger.info(
+                    f"Price difference too large: {price_diff_pct:.2f}% (>{MAX_PRICE_DIFF_PCT}%). "
+                    f"Live: {live_price:.2f}, Candle Close: {latest_candle_close:.2f}. Skipping trades for {symbol}..."
+                )
+                time.sleep(60)
+                continue
+            elif price_diff_pct > 0.5:  # Log significant but acceptable differences
+                logger.debug(f"Price difference: {price_diff_pct:.2f}% for {symbol}. Live: {live_price:.2f}, Candle: {latest_candle_close:.2f}")
+            current_utc_time = datetime.now(timezone.utc)
+            minutes_per_candle = tf_map.get(timeframe, 1)
+            max_age = minutes_per_candle * 90
+            candle_age = max(0, (current_utc_time - latest_candle_time).total_seconds())
+            tick_age = max(0, (current_utc_time - tick_time_utc).total_seconds())
+            logger.info(f"  * Candle Age: {candle_age:.2f} sec (max {max_age})\n  * Tick Age: {tick_age:.2f} sec (max {max_age})")
+            market_open = is_symbol_market_open(symbol, current_utc_time) # Uses imported is_symbol_market_open
+            logger.info(
+                f"[TIME] {symbol} | Market Open: {market_open} | Candle: {latest_candle_time} | Tick: {tick_time_utc} | Candle Age: {candle_age:.2f}s | Tick Age: {tick_age:.2f}s"
+            )
+            if not market_open:
+                logger.info(f"{symbol} market is CLOSED (US stocks: 13:30–20:00 UTC). Skipping trading for this symbol.")
+                time.sleep(60)
+                continue
+            if candle_age > max_age and tick_age > max_age:
+                logger.warning(f"Both candle and tick are too old for {symbol}: Candle Age={candle_age:.2f}s, Tick Age={tick_age:.2f}s. Skipping trades...")
+                time.sleep(60)
+                continue
+            else:
+                if candle_age > max_age and tick_age > max_age:
+                    logger.info(f"Market closed for {symbol}. Data is old. Skipping quietly.")
+                    time.sleep(60)
+                    continue
+            # --- New candle check ---
+            if last_candle_time is not None and latest_candle_time == last_candle_time:
+                logger.info(f"No new candle for {symbol}. Waiting...")
+                sleep_time = max(0, 60 - (time.time() - cycle_start_time))
+                time.sleep(sleep_time)
+                continue
+            last_candle_time = latest_candle_time
+            stuck_candle_counter = 0
+            # --- News filter placeholder ---
+            if not news_filter(symbol): # Uses imported news_filter
+                logger.info(f"News filter blocked trading for {symbol}. Skipping this cycle...")
+                time.sleep(60)
+                continue
+
+            # Analyze market conditions
+            market_conditions = analyze_market_conditions(symbol, df)
+            atr = calculate_atr(df)
+            if atr is None or atr == 0 or (hasattr(atr, 'isnan') and atr.isnan()) or (isinstance(atr, float) and math.isnan(atr)):
+                logger.warning(f"ATR is None or zero for {symbol}. Using fallback value.")
+                atr = 1.0 if 'XAU' in symbol or 'GOLD' in symbol else 0.01
+            if 'close' in df and len(df['close'].dropna()) > 10:
+                volatility = df['close'].dropna().std()
+                if volatility is None or volatility == 0 or (hasattr(volatility, 'isnan') and volatility.isnan()) or (isinstance(volatility, float) and math.isnan(volatility)):
+                    logger.warning(f"Volatility is None or zero for {symbol}. Using fallback value.")
+                    volatility = 1.0 if 'XAU' in symbol or 'GOLD' in symbol else 0.01
+            else:
+                logger.warning(f"Volatility is None or zero for {symbol}. Using fallback value.")
+                volatility = 1.0 if 'XAU' in symbol or 'GOLD' in symbol else 0.01
+            trend = 'up' if df['close'].iloc[-1] > df['close'].iloc[-10] else 'down'
+            logger.info(f"Market Analysis:\n  * ATR: {atr:.2f}\n  * Volatility: {volatility:.2f}\n  * Trend: {trend}")
+            # --- FIX: RSI calculation robust to short data and index error ---
+            if 'close' in df and len(df) >= 15:
+                rsi_series = df['close'].rolling(14).apply(
+                    lambda x: (x.diff().clip(lower=0).sum() / abs(x.diff()).sum())*100 if abs(x.diff()).sum() > 0 else 50
+                )
+                rsi = rsi_series.iloc[-1] if not rsi_series.isna().all() else 50
+            else:
+                rsi = 50
+            logger.info(f"  * RSI: {rsi:.2f}\n  * Current Price: {live_price:.2f}\n  * Price Change: {((live_price - prices[-2])/prices[-2]*100):.2f}%")
+            manage_open_positions(symbol, atr)
+            equity = get_account_equity() # Calls internal get_account_equity, which then calls file.py's
+            logger.info(f"Account Status:\n  * Equity: ${equity:.2f}")
+            if not check_risk_limits(config, equity):
+                logger.warning(f"Risk limits exceeded for {symbol}. Skipping this cycle...")
+                time.sleep(60)
+                continue
+            if not check_equity_curve_protection(equity): # Uses imported check_equity_curve_protection
+                logger.warning("Equity curve protection triggered. Skipping all strategies this cycle.")
+                time.sleep(60)
+                continue
+            if not check_portfolio_correlation(symbol): # Uses imported check_portfolio_correlation
+                logger.warning("Portfolio correlation filter triggered. Skipping all strategies this cycle.")
+                time.sleep(60)
+                continue
+            if check_global_risk_limits(): # Uses imported check_global_risk_limits
+                logger.warning("Global risk limits triggered. Skipping all strategies this cycle.")
+                time.sleep(60)
+                continue
+
+            # Now, strategies don't directly execute trades, they generate signals
+            for strategy_name, strategy in sorted(strategies, key=lambda x: strategy_priority.get(x[0], 99)):
+                try:
+                    # Check if this strategy has already processed this candle
+                    if (symbol, strategy_name) in last_executed_candle_for_strategy and last_executed_candle_for_strategy[(symbol, strategy_name)] == latest_candle_time:
+                        logger.info(f"[SKIP] {strategy_name}: Already processed for candle {latest_candle_time}. Skipping.")
+                        continue
+
+                    logger.info(f"\nChecking {strategy_name} for {symbol}...\nExecuting {strategy_name} | Symbol: {symbol} | Capital: ${equity:.2f}")
+                    
+                    # Update the last processed candle time for this strategy
+                    last_executed_candle_for_strategy[(symbol, strategy_name)] = latest_candle_time # Uses imported last_executed_candle_for_strategy
+                    
+                    # Use the imported check_trade_limits from file.py
+                    if not check_trade_limits(symbol, strategy_name): # Uses imported check_trade_limits
+                        logger.info(f"✅ {strategy_name} has trades remaining today for {symbol}")
+                        continue
+                    try:
+                        # All strategies now use execute method
+                            result = strategy.execute(symbol, prices, df, equity, allow_multiple_trades)
+                    except Exception as e:
+                        logger.error(f"Error executing {strategy_name}: {str(e)}")
+                        continue
+
+                    # Pass signal to centralized process_strategy_signal
+                    market_data = {"df": df, "atr": atr, "equity": equity, "volatility": volatility, "trend": trend, "rsi": rsi}
+                    process_strategy_signal(symbol, strategy_name, result, strategy_priority.get(strategy_name, 3), market_data) # Uses imported process_strategy_signal
+
+                except Exception as e:
+                    logger.error(f"[ERROR] Error executing strategy {strategy_name}: {str(e)}", exc_info=True)
+                    continue
+            
+
+            logger.info(f"Market Conditions for {symbol}: ATR={atr:.2f}, Volatility={volatility:.2f}, Trend={trend}, RSI={rsi:.2f}, Live Price={live_price:.2f}")
+            
+            cycle_duration = time.time() - cycle_start_time
+            sleep_time = max(0, 60 - cycle_duration) # Ensure at least 60 seconds per cycle
+            logger.info(f"Cycle for {symbol} finished in {cycle_duration:.2f} seconds. Sleeping for {sleep_time:.2f} seconds.")
+            time.sleep(sleep_time)
+
+        except Exception as e:
+            logger.error(f"Unhandled error in run_strategy_for_symbol for {symbol}: {str(e)}", exc_info=True)
+            time.sleep(60) # Wait before next attempt
+
+def thread_wrapper(symbol, timeframe, count, strategies, config):
+    last_cycle_time = [time.time()]
+    cycle_lock = threading.Lock()  # Add lock to prevent concurrent cycles
+
+    def watchdog():
+        while True:
+            time.sleep(10)
+            current_time = time.time()
+            if current_time - last_cycle_time[0] > 120:
+                logger.error(f"Thread for {symbol} appears to be stuck. Last cycle was {current_time - last_cycle_time[0]:.2f} seconds ago.")
+                logger.info(f"Attempting to restart thread for {symbol}...")
+                try:
+                    positions = mt5.positions_get(symbol=symbol)
+                    logger.info(f"Open positions for {symbol}: {positions if positions else 'None'}")
+                    # Improved log file reading
+                    if logger.handlers and hasattr(logger.handlers[0], 'baseFilename'):
+                        last_log = logger.handlers[0].baseFilename
+                        if os.path.exists(last_log):
+                            with open(last_log, 'r') as f:
+                                lines = f.readlines()
+                                if lines:
+                                    last_lines = lines[-5:] if len(lines) >= 5 else lines
+                                    logger.info(f"Last {len(last_lines)} log lines:\n{''.join(last_lines)}")
+                                else:
+                                    logger.info("Log file is empty.")
+                        else:
+                            logger.info("Log file does not exist.")
+                    else:
+                        logger.info("No log file handler found in logger.")
+                except Exception as e:
+                    logger.error(f"Error in watchdog while gathering info: {str(e)}")
+                thread = threading.Thread(target=thread_wrapper, args=(symbol, timeframe, count, strategies, config), daemon=True)
+                thread.start()
+                return
+
+    watchdog_thread = threading.Thread(target=watchdog, daemon=True)
+    watchdog_thread.start()
+
+    try:
+        while True:
+            with cycle_lock:  # Use lock to prevent concurrent cycles
+                if not ensure_mt5_connection():  # Check connection before each cycle
+                    logger.error(f"MT5 connection lost for {symbol}. Waiting to reconnect...")
+                    time.sleep(30)
+                    continue
+                run_strategy_for_symbol(symbol, timeframe, count, strategies, config)
+                last_cycle_time[0] = time.time()
+    except Exception as e:
+        logger.error(f"Thread for {symbol} failed: {str(e)}. Watchdog will attempt to restart.")
+
+def poll_bot_settings():
+    """Poll /api/bot/settings every 10 seconds and return the latest settings."""
+    import requests
+    while True:
+        try:
+            res = requests.get("http://localhost:8000/api/bot/settings")
+            settings = res.json()
+            return settings
+        except Exception as e:
+            print(f"Error polling bot settings: {e}")
+            time.sleep(10)
+
+def main():
+    try:
+        config = load_config()
+        logger = setup_logging()
+        if logger is None:
+            print("Failed to setup logging. Exiting...")
+            sys.exit(1)
+
+        if not ensure_mt5_connection():
+            logger.error("Failed to ensure MT5 connection. Exiting...")
+            sys.exit(1)
+        logger.info("MT5 initialized successfully")
+
+        load_last_trade_times()
+        load_active_trades() # This will use the active_trades imported from file.py
+
+        strategies = [
+            ("mmc_combo_strategy", MMCXAUUSDStrategy()),
+            ("mmc", mmc_strategy()), # Use imported mmc_strategy
+            ("mmxm", mmxm()), # Use imported mmxm
+            ("msb_retest", msb_retest()), # Use imported msb_retest
+            ("order_block", order_block()), # Use imported order_block
+            ("ote", OTEStrategy()),
+            ("amd_strategy", amd_strategy()), # Use imported amd_strategy
+            ("judas_swing", judas_swing()) # Use imported judas_swing
+        ]
+
+        timeframe_str = config.get("timeframe", "TIMEFRAME_M15")
+        timeframe = getattr(mt5, timeframe_str, mt5.TIMEFRAME_M15)
+        candle_count = config.get("candle_count", 50)
+
+        symbols = list(set([
+            "XAUUSD", "XAGUSD", "GBPJPY", "USDJPY", "EURJPY", "US30", "AMD", "MSFT", "NVDA"
+        ] + config.get("symbols", [])))
+
+
+        def trading_loop():
+            while True:
+                settings = poll_bot_settings()
+                bot_active = settings.get("bot_active", False)
+                killzone = settings.get("killzone", False)  # legacy/global
+                selected_strategy = settings.get("strategy", "mmxm")
+                all_strategies = settings.get("all_strategies", False)
+                selected_strategies = settings.get("selected_strategies", [])
+                killzone_map = settings.get("killzone_map", {})
+
+                if not bot_active:
+                    logger.info("Bot is OFF (waiting for web control ON)")
+                    time.sleep(10)
+                    continue
+
+                logger.info(f"Bot is ACTIVE | All Strategies: {all_strategies} | Selected: {selected_strategies} | Killzone Map: {killzone_map}")
+
+                for symbol in symbols:
+                    # Moved most of the logic into run_strategy_for_symbol and centralized signal processing.
+                    # The original trading_loop in main.py will now simply call run_strategy_for_symbol in a thread.
+                    thread = threading.Thread(target=thread_wrapper, args=(symbol, timeframe, candle_count, strategies, config), daemon=True)
+                    thread.start()
+
+                # This sleep ensures main loop does not hog CPU, while threads run strategies.
+                time.sleep(60)
+
+        # Start trading loop in a thread
+        t = threading.Thread(target=trading_loop, daemon=True)
+        t.start()
+        t.join()
+
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received. Shutting down...")
+        save_last_trade_times()
+        save_active_trades() # Use the active_trades from file.py
+        mt5.shutdown()
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Unhandled exception in main: {str(e)}")
+        sys.exit(1)
+
+
+# The unittest block should also be removed if main.py is not meant to be runnable as a test.
+if __name__ == "__main__":
+    import sys
+    if "--test" in sys.argv:
+        pass # Handle test mode if needed, otherwise this block can be removed if not testing
+    else:
+        main()
+
+# --- Functions that were missing from main.py.tmp but are now being added back ---
+def send_alert(message):
+    logger.info(f"[ALERT] {message}")
+
+def push_to_dashboard(data):
+    logger.debug(f"[DASHBOARD] {data}")
+
+def log_broker_metrics(order_result, latency=None):
+    if order_result is not None:
+        logger.info(f"Order Result: retcode={order_result.retcode}, comment={order_result.comment}, latency={latency}")
+    else:
+        logger.warning(f"Order Result: None, latency={latency}")

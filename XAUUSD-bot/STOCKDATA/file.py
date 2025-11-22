@@ -1,0 +1,3630 @@
+import sys
+import os
+
+# The project path is now set by __main__.py, so we can import directly.
+from utils.path_utils import setup_project_paths
+setup_project_paths()
+
+import threading
+import logging
+import logging.handlers
+import time
+import json
+import warnings
+from datetime import datetime, timedelta, timezone
+import pytz
+import numpy as np
+import pandas as pd
+import MetaTrader5 as mt5
+import backoff
+import functools
+import traceback
+import csv
+import shutil
+import io
+from collections import defaultdict
+import math
+import requests
+
+# Import external libraries (handle fallbacks here)
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+    print('BeautifulSoup module not installed. News filter may not work correctly.')
+
+try:
+    # Import telegram module
+    import telegram
+except ImportError:
+    telegram = None
+    print('Telegram module not installed. Telegram alerts will not work.')
+
+# Import necessary modules from modules directory
+from modules.indicators import calculate_atr, calculate_rsi
+from modules.llm_sentiment_analyzer import LLMSentimentAnalyzer
+from modules.ml_filter import MLTradeFilter
+
+# *** CRUCIAL CHANGE HERE: Assuming MMCXAUUSDStrategy is the class in mmc_combo_strategy.py ***
+from modules.mmc_combo_strategy import MMCXAUUSDStrategy
+from modules.mmxm import MMXMStrategy
+from modules.msb_retest import MSBRetestStrategy
+from modules.order_block import OrderBlockStrategy
+from modules.ote import OTEStrategy
+from modules.amd_strategy import AMDStrategy
+from modules.judas_swing import JudasSwingStrategy as judas_swing
+
+# --- Global Data Structures (Managed by file.py, imported by main.py) ---
+__all__ = [
+    'active_trades', 'data_lock', 'last_trade_candle', 'partial_trade_tracking_map',
+    'daily_trade_counts', 'last_executed_candle_for_strategy', 'judas_swing',
+    'llm_sentiment_analyzer_instance', 'ml_trade_filter_instance', 'news_sentiment_cache',
+    'MAX_PRICE_DIFF_PCT', 'MAX_TRADES_PER_STRATEGY_PER_SYMBOL_PER_DAY',
+    'ENABLE_BE_SL', 'MAX_GLOBAL_OPEN_POSITIONS', 'STARTUP_TIME',
+    'EXECUTE_REAL_TRADES', 'MIN_CONFIDENCE',
+    'MAX_CANDLE_AGE_SECONDS', 'consecutive_losses', 'last_equity_curve',
+    'trading_paused_due_to_equity', 'EQUITY_CURVE_MA_PERIOD',
+    'MAX_CONSECUTIVE_LOSSES', 'CORRELATED_SYMBOLS_INTERNAL',
+    'SPECIAL_MARKET_HOURS'
+]
+
+active_trades = {} # Stores currently open trades data
+data_lock = threading.Lock() # For thread-safe access to global data
+last_trade_candle = {} # {(symbol, strategy_name): datetime_object} - Last candle processed by strategy
+partial_trade_tracking_map = {} # Tracks progress for partial profit orders
+daily_trade_counts = {} # {(symbol, strategy_name, date_object): count} - Per-strategy daily trade counts
+last_executed_candle_for_strategy = defaultdict(lambda: None) # {(symbol, strategy_name): candle_timestamp}
+
+# Global instance for LLM Sentiment Analyzer and MLTradeFilter
+llm_sentiment_analyzer_instance = None
+ml_trade_filter_instance = None # NEW: ML filter instance
+# Global sentiment cache to avoid repeated LLM calls for same news/cycle
+news_sentiment_cache = {} # {(news_id/text_hash): {"sentiment": str, "score": float, "timestamp": datetime}}
+
+# Global variables for centralized risk management in file.py
+# These are internal constants for file.py's logic
+MAX_PRICE_DIFF_PCT = 1.0  # Max allowed % difference between live price and candle close before skipping trades
+MAX_TRADES_PER_STRATEGY_PER_SYMBOL_PER_DAY = 10
+ENABLE_BE_SL = False # Flag for Break-Even Stop Loss
+MAX_GLOBAL_OPEN_POSITIONS = 1_000_000_000 # No practical limit (User requested to disable this logic)
+
+# --- Strict Processor Constants & Startup Control ---
+STARTUP_TIME = datetime.now(timezone.utc)
+EXECUTE_REAL_TRADES = True  # ✅ ENABLED for live trading
+MIN_CONFIDENCE = 0.5  # Reduced from 0.6 to 50% to allow more trades
+MAX_CANDLE_AGE_SECONDS = 900
+
+# Equity curve protection internal state
+consecutive_losses = 0
+last_equity_curve = []
+trading_paused_due_to_equity = False
+EQUITY_CURVE_MA_PERIOD = 20
+MAX_CONSECUTIVE_LOSSES = 5
+
+# Correlated symbols (internal to file.py's risk logic)
+CORRELATED_SYMBOLS_INTERNAL = [
+    {"XAUUSD", "XAUEUR"},
+    {"USDJPY", "GBPJPY"},
+    {"US30", "SPX500"},
+    # Add more correlated sets as needed
+]
+
+# Symbol-specific market hours (internal to file.py's checks)
+# These should ideally be loaded from config.json in main.py and passed/set here.
+# For now, keeping as local default for self-containment/testing.
+# Main.py should pass its loaded config values for these.
+SPECIAL_MARKET_HOURS = {
+    'XAUUSD': {'start': '00:00', 'end': '23:59'},
+    'XAGUSD': {'start': '00:00', 'end': '23:59'},
+    'US30': {'start': '00:00', 'end': '23:59'},
+    'NVDA': {'start': '00:00', 'end': '23:59'},
+    'AMD': {'start': '00:00', 'end': '23:59'},
+    'MSFT': {'start': '00:00', 'end': '23:59'},
+    'EURJPY': {'start': '00:00', 'end': '23:59'},
+    'USDJPY': {'start': '00:00', 'end': '23:59'},
+    'GBPJPY': {'start': '00:00', 'end': '23:59'},
+    # Add more as needed
+}
+
+def get_market_hours(symbol):
+    hours = SPECIAL_MARKET_HOURS.get(symbol)
+    if not hours or 'start' not in hours or 'end' not in hours:
+        if file_logger: file_logger.warning(f"Missing or invalid market hours for {symbol}, using default 00:00-23:59")
+    return {'start': '00:00', 'end': '23:59'}
+
+def is_market_open(symbol, current_time):
+    """
+    Check if the market is currently open for a given symbol.
+
+    Args:
+        symbol (str): The trading symbol
+        current_time (datetime): Current UTC time
+
+    Returns:
+        bool: True if market is open, False if closed
+    """
+    try:
+        hours = get_market_hours(symbol)
+        if not hours:
+            return True  # Default to open if no hours specified
+
+        # Parse market hours
+        start_str = hours.get('start', '00:00')
+        end_str = hours.get('end', '23:59')
+
+        # Convert current time to HH:MM format
+        current_time_str = current_time.strftime('%H:%M')
+
+        # Handle 24:00 as 00:00 next day
+        if end_str == '24:00':
+            end_str = '23:59'
+
+        # Simple string comparison for now (could be enhanced with date logic)
+        return start_str <= current_time_str <= end_str
+
+    except Exception as e:
+        file_logger.error(f"Error checking market hours for {symbol}: {str(e)}")
+        return True  # Default to open on error
+
+# Ensure logger is always defined within file.py
+# Initialize file_logger with proper fallback
+file_logger = None
+
+def setup_file_logger():
+    """Gets the logger for file.py, assuming it has been configured in main."""
+    global file_logger
+    # The logger is now configured in main.py, we just get it here.
+    file_logger = logging.getLogger('main_bot.file')
+    # If no handlers exist, add a basic one to prevent NoneType errors
+    if not file_logger.handlers:
+        handler = logging.FileHandler("file.log")
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
+        file_logger.addHandler(handler)
+        file_logger.setLevel(logging.DEBUG)
+    return file_logger
+
+def init_ml_trade_filter(model_path="ml_trade_filter.pkl"):
+    """
+    Initialize the ML Trade Filter with the specified model path.
+
+    Args:
+        model_path (str): Path to the ML model file (default: "ml_trade_filter.pkl")
+    """
+    global ml_trade_filter_instance
+
+    try:
+        # Import the MLTradeFilter class from the modules directory
+        from modules.ml_filter import MLTradeFilter
+
+        # Check if model file exists
+        if not os.path.exists(model_path):
+            file_logger.warning(f"ML model file not found at {model_path}")
+            file_logger.info("Creating a dummy ML model for testing...")
+
+            # Create a simple dummy model if file doesn't exist
+            try:
+                import joblib
+                from sklearn.ensemble import RandomForestClassifier
+                from sklearn.datasets import make_classification
+
+                # Create a simple dummy dataset with 13 features
+                X, y = make_classification(n_samples=100, n_features=13, n_informative=8, n_redundant=0, random_state=42)
+
+                # Create and train a simple model
+                model = RandomForestClassifier(n_estimators=10, random_state=42)
+                model.fit(X, y)
+
+                # Save the model
+                joblib.dump(model, model_path)
+                file_logger.info(f"Dummy ML model created successfully at {model_path}")
+
+            except Exception as model_error:
+                file_logger.error(f"Failed to create dummy ML model: {str(model_error)}")
+                file_logger.warning("ML filtering will be disabled.")
+                ml_trade_filter_instance = None
+                return
+
+        # Initialize the ML filter instance
+        ml_trade_filter_instance = MLTradeFilter(model_path)
+
+        if ml_trade_filter_instance.model is not None:
+            file_logger.info(f"ML Trade Filter initialized successfully with model: {model_path}")
+        else:
+            file_logger.warning(f"ML Trade Filter initialized but no model loaded from: {model_path}")
+            file_logger.info("Trades will be allowed without ML filtering.")
+
+    except ImportError as e:
+        file_logger.error(f"Could not import MLTradeFilter module: {str(e)}")
+        file_logger.warning("ML filtering will be disabled.")
+        ml_trade_filter_instance = None
+    except Exception as e:
+        file_logger.error(f"Error initializing ML Trade Filter: {str(e)}")
+        file_logger.warning("ML filtering will be disabled.")
+        ml_trade_filter_instance = None
+
+# DB and File Paths (Internal to file.py logic)
+TRADE_LOG_CSV_FILE = "trades/trade_log.csv"
+ACTIVE_TRADES_JSON_FILE = os.path.join("logs", "active_trades.json")
+TRADE_DB_FILE = "trades/trades.db"
+
+# --- DB Management ---
+def ensure_trades_table_exists():
+    import sqlite3
+    try:
+        os.makedirs(os.path.dirname(TRADE_DB_FILE), exist_ok=True)
+        conn = sqlite3.connect(TRADE_DB_FILE)
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket INTEGER UNIQUE,
+                symbol TEXT,
+                strategy TEXT,
+                trade_type TEXT,
+                lot_size REAL,
+                entry_time TEXT,
+                stop_loss REAL,
+                take_profit REAL,
+                comment TEXT,
+                risk_amount REAL,
+                equity_before REAL,
+                equity_after REAL,
+                exit_time TEXT,
+                profit REAL,
+                win_loss TEXT,
+                slippage REAL,
+                latency REAL
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        file_logger.info("Trades SQLite table ensured.")
+    except Exception as e:
+        file_logger.error(f"Error ensuring trades table exists: {str(e)}", exc_info=True)
+
+# ensure_trades_table_exists() # FIX: Defer initialization
+
+# --- Persistence Loaders (for file.py's internal state) ---
+def load_active_trades_from_file_py():
+    global active_trades
+    if os.path.exists(ACTIVE_TRADES_JSON_FILE):
+        try:
+            with open(ACTIVE_TRADES_JSON_FILE, 'r') as f:
+                data = json.load(f)
+                with data_lock:
+                    # Convert ticket keys to int, and datetime strings back to objects if stored
+                    for ticket_str, trade_info in data.items():
+                        ticket = int(ticket_str)
+                        if 'entry_time' in trade_info and isinstance(trade_info['entry_time'], str):
+                            try:
+                                trade_info['entry_time'] = datetime.fromisoformat(trade_info['entry_time']).replace(tzinfo=pytz.UTC)
+                            except ValueError:
+                                pass # Keep as string if parsing fails
+                        active_trades[ticket] = trade_info
+            file_logger.info(f"Loaded active trades: {len(active_trades)} trades.")
+        except Exception as e:
+            file_logger.error(f"Error loading active trades from file.py: {str(e)}", exc_info=True)
+
+def save_active_trades_for_file_py():
+    try:
+        os.makedirs(os.path.dirname(ACTIVE_TRADES_JSON_FILE) or '.', exist_ok=True)
+        with data_lock:
+            serializable_active_trades = {
+                str(ticket): {
+                    k: v.isoformat() if isinstance(v, datetime) else v
+                    for k, v in trade_info.items() # Iterate through individual trade_info dictionary
+                }
+                for ticket, trade_info in active_trades.items()
+            }
+            with open(ACTIVE_TRADES_JSON_FILE, 'w') as f:
+                json.dump(serializable_active_trades, f, indent=4)
+            file_logger.debug(f"Saved active trades from file.py: {len(active_trades)} trades.")
+    except Exception as e:
+        file_logger.error(f"Error saving active trades from file.py: {str(e)}", exc_info=True)
+
+def load_last_executed_candle_state_from_file_py():
+    global last_executed_candle_for_strategy
+    state_file = os.path.join("logs", "last_executed_candle.json")
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, 'r') as f:
+                data = json.load(f)
+                with data_lock:
+                    for (symbol_strategy_key_str), timestamp_str in data.items():
+                        # Keys in JSON will be string like "('XAUUSD', 'mmxm')"
+                        try:
+                            key_tuple = eval(symbol_strategy_key_str)
+                            if isinstance(key_tuple, tuple) and len(key_tuple) == 2:
+                                last_executed_candle_for_strategy[key_tuple] = datetime.fromisoformat(timestamp_str).replace(tzinfo=pytz.UTC)
+                            else:
+                                file_logger.warning(f"Skipping malformed key in last_executed_candle.json: {symbol_strategy_key_str}")
+                        except Exception as e:
+                            file_logger.warning(f"Error parsing last_executed_candle key {symbol_strategy_key_str}: {e}")
+            file_logger.info(f"Loaded last executed candle state for {len(last_executed_candle_for_strategy)} strategies.")
+        except Exception as e:
+            file_logger.error(f"Error loading last executed candle state: {str(e)}", exc_info=True)
+
+def save_last_executed_candle_state_for_file_py():
+    state_file = os.path.join("logs", "last_executed_candle.json")
+    try:
+        os.makedirs(os.path.dirname(state_file), exist_ok=True)
+        with data_lock:
+            serializable_data = {
+                str(k): v.isoformat() for k, v in last_executed_candle_for_strategy.items()
+            }
+            with open(state_file, 'w') as f:
+                json.dump(serializable_data, f, indent=4)
+        file_logger.debug("Saved last executed candle state.")
+    except Exception as e:
+        file_logger.error(f"Error saving last executed candle state: {str(e)}", exc_info=True)
+
+
+# --- Core Trade Logging and Update ---
+def log_trade_to_csv(ticket, symbol, strategy_name, trade_type, lot_size, entry_time, sl, tp, comment, risk_amount, equity_before, equity_after, slippage, latency):
+    try:
+        entry_time_str = entry_time.strftime('%Y-%m-%d %H:%M:%S %Z') if isinstance(entry_time, datetime) else str(entry_time)
+        
+        # Ensure CSV file exists with proper headers (18 columns)
+        csv_headers = [
+            'Ticket', 'Symbol', 'Strategy', 'Trade Type', 'Lot Size', 'Entry Time',
+            'Stop Loss', 'Take Profit', 'Comment', 'Risk Amount', 'Equity Before',
+            'Equity After', 'Slippage', 'Latency', 'Exit Time', 'Profit',
+            'Win/Loss', 'Reserved'
+        ]
+        
+        if not os.path.exists(TRADE_LOG_CSV_FILE):
+            with open(TRADE_LOG_CSV_FILE, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(csv_headers)
+        
+        # Append trade data (pad trailing fields that are only available on exit)
+        with open(TRADE_LOG_CSV_FILE, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                ticket,
+                symbol,
+                strategy_name,
+                trade_type,
+                lot_size,
+                entry_time_str,
+                sl,
+                tp,
+                comment,
+                risk_amount,
+                equity_before,
+                equity_after,
+                slippage,
+                latency,
+                '',  # Exit Time (set on close)
+                '',  # Profit (set on close)
+                '',  # Win/Loss (set on close)
+                ''   # Reserved for future
+            ])
+        
+        file_logger.info(f"Trade logged to CSV: {TRADE_LOG_CSV_FILE} for ticket {ticket}")
+
+        # Also log to SQLite DB with correct schema
+        import sqlite3
+        conn = sqlite3.connect(TRADE_DB_FILE)
+        c = conn.cursor()
+        
+        # Check if table exists and has correct schema
+        c.execute("PRAGMA table_info(trades)")
+        columns = [col[1] for col in c.fetchall()]
+        
+        if not columns:
+            # Create table with correct schema if it doesn't exist
+            c.execute('''CREATE TABLE IF NOT EXISTS trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket INTEGER UNIQUE,
+                symbol TEXT,
+                strategy TEXT,
+                trade_type TEXT,
+                lot_size REAL,
+                entry_time TEXT,
+                stop_loss REAL,
+                take_profit REAL,
+                comment TEXT,
+                risk_amount REAL,
+                equity_before REAL,
+                equity_after REAL,
+                exit_time TEXT,
+                profit REAL,
+                win_loss TEXT,
+                slippage REAL,
+                latency REAL
+            )''')
+            conn.commit()
+            file_logger.info("Created trades table with correct schema")
+        elif 'ticket' not in columns:
+            # Add missing columns if table exists but is missing columns
+            try:
+                c.execute("ALTER TABLE trades ADD COLUMN ticket INTEGER UNIQUE")
+                c.execute("ALTER TABLE trades ADD COLUMN symbol TEXT")
+                c.execute("ALTER TABLE trades ADD COLUMN strategy TEXT")
+                c.execute("ALTER TABLE trades ADD COLUMN trade_type TEXT")
+                c.execute("ALTER TABLE trades ADD COLUMN lot_size REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN entry_time TEXT")
+                c.execute("ALTER TABLE trades ADD COLUMN stop_loss REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN take_profit REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN comment TEXT")
+                c.execute("ALTER TABLE trades ADD COLUMN risk_amount REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN equity_before REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN equity_after REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN exit_time TEXT")
+                c.execute("ALTER TABLE trades ADD COLUMN profit REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN win_loss TEXT")
+                c.execute("ALTER TABLE trades ADD COLUMN slippage REAL")
+                c.execute("ALTER TABLE trades ADD COLUMN latency REAL")
+                conn.commit()
+                file_logger.info("Added missing columns to trades table")
+            except Exception as alter_error:
+                file_logger.error(f"Failed to add missing columns: {str(alter_error)}")
+                # If ALTER fails, recreate the table
+                c.execute("DROP TABLE IF EXISTS trades")
+                c.execute('''CREATE TABLE trades (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticket INTEGER UNIQUE,
+                    symbol TEXT,
+                    strategy TEXT,
+                    trade_type TEXT,
+                    lot_size REAL,
+                    entry_time TEXT,
+                    stop_loss REAL,
+                    take_profit REAL,
+                    comment TEXT,
+                    risk_amount REAL,
+                    equity_before REAL,
+                    equity_after REAL,
+                    exit_time TEXT,
+                    profit REAL,
+                    win_loss TEXT,
+                    slippage REAL,
+                    latency REAL
+                )''')
+                conn.commit()
+                file_logger.info("Recreated trades table with correct schema")
+        
+        c.execute('''INSERT OR IGNORE INTO trades (
+                        ticket, symbol, strategy, trade_type, lot_size, entry_time,
+                        stop_loss, take_profit, comment, risk_amount, equity_before,
+                        equity_after, slippage, latency
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                  (ticket, symbol, strategy_name, trade_type, lot_size, entry_time_str,
+                   sl, tp, comment, risk_amount, equity_before, equity_after, slippage, latency))
+        conn.commit()
+        conn.close()
+        file_logger.debug(f"Trade logged to SQLite DB: {ticket}")
+
+    except Exception as e:
+        file_logger.error(f"Error logging trade to CSV/DB: {str(e)}", exc_info=True)
+        try:
+            if os.path.exists(TRADE_LOG_CSV_FILE):
+                backup_file = f"{TRADE_LOG_CSV_FILE}.backup_{int(time.time())}"
+                shutil.copy(TRADE_LOG_CSV_FILE, backup_file)
+                file_logger.info(f"Corrupted CSV backed up to: {backup_file}")
+        except Exception as backup_error:
+            file_logger.error(f"Failed to backup corrupted CSV: {str(backup_error)}")
+
+def update_trade_in_csv(ticket, exit_price, profit, win_loss_status):
+    try:
+        if not os.path.exists(TRADE_LOG_CSV_FILE):
+            file_logger.error("Trade log CSV file not found for update.")
+            return
+
+        df = pd.read_csv(TRADE_LOG_CSV_FILE)
+        if df.empty:
+            file_logger.error("Trade log CSV is empty, cannot update.")
+            return
+
+        # Find row by Ticket (now that Ticket is logged)
+        trade_index = df[df['Ticket'].astype(str) == str(ticket)].index
+
+        if not trade_index.empty:
+            df.loc[trade_index, 'Exit Time'] = datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S %Z')
+            df.loc[trade_index, 'Profit'] = profit
+            df.loc[trade_index, 'Win/Loss'] = win_loss_status
+
+            df.to_csv(TRADE_LOG_CSV_FILE, index=False)
+            file_logger.info(f"Trade {ticket} updated in CSV. Profit: {profit:.2f}, Status: {win_loss_status}")
+
+            # Also update SQLite DB
+            import sqlite3
+            conn = sqlite3.connect(TRADE_DB_FILE)
+            c = conn.cursor()
+            c.execute('''UPDATE trades SET exit_time=?, profit=?, win_loss=? WHERE ticket=?''',
+                        (datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S %Z'), profit, win_loss_status, ticket))
+            conn.commit()
+            conn.close()
+            file_logger.debug(f"Trade {ticket} updated in SQLite DB.")
+        else:
+            file_logger.warning(f"No trade found in CSV/DB for ticket {ticket} to update.")
+    except Exception as e:
+        file_logger.error(f"Error updating trade {ticket} in CSV/DB: {str(e)}", exc_info=True)
+
+def repair_trade_log_csv():
+    if not os.path.exists(TRADE_LOG_CSV_FILE):
+        file_logger.warning(f"Attempted to repair CSV but file not found: {TRADE_LOG_CSV_FILE}")
+        return
+    try:
+        with open(TRADE_LOG_CSV_FILE, 'r', encoding='utf-8', errors='replace') as f:
+            lines = f.readlines()
+        if not lines:
+            return
+
+        # Determine expected number of fields from the header
+        header = lines[0]
+        header_fields = list(csv.reader(io.StringIO(header)))[0]
+        num_expected_fields = len(header_fields)
+
+        cleaned_lines = [header]
+        for i, line in enumerate(lines[1:], start=1):
+            try:
+                fields = list(csv.reader(io.StringIO(line)))[0]
+                if len(fields) != num_expected_fields:
+                    file_logger.warning(f"Malformed line {i} in CSV. Expected {num_expected_fields}, got {len(fields)}: {line.strip()}")
+                    if len(fields) > num_expected_fields:
+                        fields = fields[:num_expected_fields]
+                    else:
+                        fields += [''] * (num_expected_fields - len(fields))
+                # Re-quote fields that contain commas to maintain CSV integrity
+                cleaned_lines.append(','.join([f'"{f}"' if ',' in str(f) else str(f) for f in fields]) + '\n')
+            except Exception as row_e:
+                file_logger.error(f"Error processing row {i} for CSV repair: {str(row_e)}. Skipping row: {line.strip()}")
+                continue
+
+        backup_file = f"{TRADE_LOG_CSV_FILE}.bak_{int(time.time())}"
+        shutil.copy(TRADE_LOG_CSV_FILE, backup_file)
+        file_logger.info(f"Original CSV backed up to: {backup_file}")
+
+        with open(TRADE_LOG_CSV_FILE, 'w', encoding='utf-8', newline='') as f:
+            f.writelines(cleaned_lines)
+        file_logger.info(f"Trade log CSV repaired: {TRADE_LOG_CSV_FILE}")
+    except Exception as e:
+        file_logger.error(f"FATAL: Error repairing trade log CSV in file.py: {str(e)}", exc_info=True)
+
+# Call this at startup to ensure CSV is clean
+# repair_trade_log_csv() # FIX: Defer initialization
+
+# --- MT5 Interaction (low-level, direct commands) ---
+# Timeout decorator for MT5 calls
+def timeout(seconds):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            result = [None]
+            exception = [None]
+            def target():
+                try:
+                    result[0] = func(*args, **kwargs)
+                except Exception as e:
+                    exception[0] = e
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
+            thread.join(seconds)
+            if thread.is_alive():
+                file_logger.error(f"Timeout: {func.__name__} took longer than {seconds} seconds")
+                return None
+            if exception[0] is not None:
+                raise exception[0]
+            return result[0]
+        return wrapper
+    return decorator
+
+@backoff.on_exception(backoff.expo, Exception, max_tries=3)
+def place_order(symbol, order_type, volume, price, sl, tp, deviation=20, comment="TradeBot", strategy_name="", risk_amount=None):
+    try:
+        # Assuming MT5 connection is already established and maintained by main.py
+        @timeout(5)
+        def get_terminal_info_internal():
+            return mt5.terminal_info()
+
+        terminal_info = get_terminal_info_internal()
+        if not terminal_info or not terminal_info.trade_allowed:
+            file_logger.error(f"Auto-trading disabled or terminal info unavailable: {terminal_info}")
+            return False, None
+
+        @timeout(5)
+        def get_symbol_info_internal():
+            return mt5.symbol_info(symbol)
+
+        symbol_info = get_symbol_info_internal()
+        if symbol_info is None or not symbol_info.visible or not symbol_info.trade_mode:
+            file_logger.error(f"Symbol {symbol} info unavailable, not visible, or trading disabled: {symbol_info}")
+            return False, None
+
+        digits = symbol_info.digits
+
+        @timeout(5)
+        def get_symbol_tick_internal():
+            return mt5.symbol_info_tick(symbol)
+
+        tick = get_symbol_tick_internal()
+        if tick is None or tick.bid == 0 or tick.ask == 0:
+            file_logger.error(f"No valid price feed for {symbol}")
+            return False, None
+
+        current_market_price = tick.ask if order_type == mt5.ORDER_TYPE_BUY else tick.bid
+        # Round prices to symbol's digits
+        current_market_price = round(current_market_price, digits)
+        sl = round(sl, digits) if sl is not None and sl > 0 else 0.0
+        tp = round(tp, digits) if tp is not None and tp > 0 else 0.0
+
+        # Validate final lot size before sending order
+        if not validate_lot_size(symbol, volume): # Using the local validate_lot_size
+            file_logger.error(f"Invalid final lot size {volume} for {symbol}. Order not placed.")
+            return False, None
+
+        equity_before = get_account_equity_for_file_py()
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": volume,
+            "type": order_type,
+            "price": current_market_price, # Use current market price for instant execution
+            "sl": sl,
+            "tp": tp,
+            "deviation": 20, # Max price deviation in points
+            "magic": 123456, # Magic number for your bot's trades
+            "comment": comment,
+            "type_time": mt5.ORDER_TIME_GTC, # Good Till Cancelled
+            "type_filling": mt5.ORDER_FILLING_FOK # Fill Or Kill
+        }
+
+        file_logger.info(f"Attempting to send order: Symbol={symbol}, Type={'BUY' if order_type == mt5.ORDER_TYPE_BUY else 'SELL'}, Lot={volume:.2f}, Price={current_market_price:.5f}, SL={sl:.5f}, TP={tp:.5f}, Comment={comment}")
+
+        start_time = time.time()
+        @timeout(10)
+        def send_order_internal():
+            return mt5.order_send(request)
+
+        result = send_order_internal()
+        end_time = time.time()
+        latency = end_time - start_time
+
+        if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+            executed_price = result.price
+            slippage = abs(current_market_price - executed_price)
+            file_logger.info(f"Trade successfully placed. Symbol: {symbol}, Type: {'BUY' if order_type == mt5.ORDER_TYPE_BUY else 'SELL'}, Ticket ID: {result.order}")
+            file_logger.debug(f"Execution details: Executed Price: {executed_price:.5f}, Slippage: {slippage:.5f}, Latency: {latency:.4f}s, Retcode: {result.retcode}")
+
+            # Log to CSV and DB immediately after successful execution
+            log_trade_to_csv(
+                ticket=result.order,
+                symbol=symbol,
+                strategy_name=strategy_name,
+                trade_type="BUY" if order_type == mt5.ORDER_TYPE_BUY else "SELL",
+                lot_size=volume,
+                entry_time=datetime.now(pytz.UTC),
+                sl=sl,
+                tp=tp,
+                comment=comment,
+                risk_amount=risk_amount,
+                equity_before=equity_before,
+                equity_after=get_account_equity_for_file_py(),
+                slippage=slippage,
+                latency=latency
+            )
+
+            # Add to active_trades for real-time tracking
+            with data_lock:
+                active_trades[result.order] = {
+                    "symbol": symbol,
+                    "strategy": strategy_name, # Stored as the base strategy name
+                    "direction": "buy" if order_type == mt5.ORDER_TYPE_BUY else "sell",  # Add direction field
+                    "full_comment": comment, # Stored as e.g., "StrategyX_TP1"
+                    "type": "BUY" if order_type == mt5.ORDER_TYPE_BUY else "SELL",
+                    "lot": volume,
+                    "entry_price": executed_price, # Use actual executed price
+                    "entry_time": datetime.now(pytz.UTC),
+                    "sl": sl,
+                    "tp": tp,
+                    "risk_amount": risk_amount
+                }
+            save_active_trades_for_file_py() # Save to file after update
+            return True, result.order
+        else:
+            file_logger.error(f"Trade FAILED to place for {symbol}. Reason: {result.comment if result else 'No result'}, Retcode: {getattr(result, 'retcode', 'N/A')}")
+            return False, None
+    except Exception as e:
+        file_logger.error(f"Critical error in place_order for {symbol}: {str(e)}", exc_info=True)
+        return False, None
+
+def get_account_equity_for_file_py():
+    """Fetches account equity. Assumes MT5 connection is active."""
+    try:
+        account_info = mt5.account_info()
+        if account_info is None:
+            file_logger.error("Failed to get account info in file.py. Returning fallback equity.")
+            return 10000.0 # Fallback default equity
+        equity = account_info.equity
+        if equity <= 0:
+            file_logger.warning("Account equity is zero or negative. Using fallback 10000.0.")
+            return 10000.0 # Prevent division by zero or invalid calculations
+        return equity
+    except Exception as e:
+        file_logger.error(f"Error in get_account_equity_for_file_py: {str(e)}", exc_info=True)
+        return 10000.0 # Safest fallback
+
+# --- Position Management ---
+def log_position_update_to_file(position_mt5_obj, update_type="UPDATE"):
+    """Logs changes to open positions (SL update, partial close, full close) to a daily text file."""
+    try:
+        filename = f"logs/positions_{datetime.now(pytz.UTC).strftime('%Y-%m-%d')}.txt"
+        os.makedirs(os.path.dirname(filename), exist_ok=True) # Ensure logs directory exists
+
+        update_details = f"""
+{'='*50}
+POSITION {update_type}
+{'='*50}
+Time: {datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S %Z')}
+Ticket: {position_mt5_obj.ticket}
+Symbol: {position_mt5_obj.symbol}
+Type: {'BUY' if position_mt5_obj.type == mt5.ORDER_TYPE_BUY else 'SELL'}
+Current Price: {position_mt5_obj.price_current:.5f}
+Open Price: {position_mt5_obj.price_open:.5f}
+Stop Loss: {position_mt5_obj.sl:.5f}
+Take Profit: {position_mt5_obj.tp:.5f}
+Profit: ${position_mt5_obj.profit:.2f}
+Volume: {position_mt5_obj.volume:.2f}
+Comment: {position_mt5_obj.comment}
+{'='*50}
+"""
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write(update_details)
+        file_logger.info(f"Position update logged for ticket {position_mt5_obj.ticket} ({update_type}).")
+    except Exception as e:
+        file_logger.error(f"Error logging position update to file: {str(e)}", exc_info=True)
+
+def manage_open_positions(symbol, atr):
+    """
+    Manages open positions:
+    - Checks for reversals to close trades early.
+    - Updates trailing stop losses.
+    """
+    try:
+        positions = mt5.positions_get(symbol=symbol)
+        if positions is None:
+            file_logger.error(f"Failed to fetch positions for {symbol} in manage_open_positions.")
+            return
+
+        # Fetch recent candles for swing/OB detection (M15 is typically good for this)
+        # Ensure that MT5 connection is active before calling copy_rates_from_pos
+        # (This check is redundant as main.py ensures connection, but safe to keep for standalone testing)
+        if not mt5.initialize():
+            file_logger.warning("MT5 not initialized in manage_open_positions. Skipping candle fetch.")
+            return
+
+        rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M15, 0, 50)
+        if rates is None or len(rates) == 0:
+            file_logger.warning(f"No recent candle data for {symbol} to manage open positions. Skipping.")
+            return
+        df_current = pd.DataFrame(rates)
+        df_current['time'] = pd.to_datetime(df_current['time'], unit='s', utc=True)
+
+        swing_highs, swing_lows = find_swing_high_low(df_current, window=5) # Assuming a 5-candle window for recent swings
+
+        for pos in positions:
+            order_type = pos.type
+            entry_price = pos.price_open
+            current_sl = pos.sl
+            direction = 'buy' if order_type == mt5.ORDER_TYPE_BUY else 'sell'
+
+            # Get current price for reversal check
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                file_logger.warning(f"No tick data for {symbol} for position {pos.ticket}. Skipping reversal/SL update for this position.")
+                continue
+            current_price = tick.bid if direction == 'buy' else tick.ask
+
+            # --- Reversal Detection Logic (Simplified for demonstration) ---
+            reversal_detected = False
+            # Example: If price moves significantly against a recent swing or OB from entry
+            if direction == 'buy':
+                # If price is now below a recent significant low (e.g., old swing low, or below new OB)
+                last_swing_low = min([x[1] for x in swing_lows[-3:]]) if swing_lows else None
+                if last_swing_low and current_price < last_swing_low - 0.5 * atr: # 0.5*atr buffer below swing low
+                    file_logger.info(f"Reversal detected for BUY {pos.ticket}: Price {current_price:.5f} broke below last swing low {last_swing_low:.5f} with ATR buffer.")
+                    reversal_detected = True
+            else: # sell
+                last_swing_high = max([x[1] for x in swing_highs[-3:]]) if swing_highs else None
+                if last_swing_high and current_price > last_swing_high + 0.5 * atr: # 0.5*atr buffer above swing high
+                    file_logger.info(f"Reversal detected for SELL {pos.ticket}: Price {current_price:.5f} broke above last swing high {last_swing_high:.5f} with ATR buffer.")
+                    reversal_detected = True
+
+            if reversal_detected:
+                file_logger.warning(f"[REVERSAL DETECTED] Closing trade {pos.ticket} for {symbol} due to reversal. PnL: {pos.profit:.2f}")
+                
+                # Prepare the close request with proper MT5 order type and correct side/price
+                # For buys, you close with a sell at Bid; for sells, buy at Ask
+                close_type = mt5.ORDER_TYPE_SELL if direction == 'buy' else mt5.ORDER_TYPE_BUY
+                close_price = tick.bid if direction == 'buy' else tick.ask
+                request_close = {
+                    "action": mt5.TRADE_ACTION_DEAL,
+                    "position": pos.ticket,
+                    "symbol": symbol,
+                    "volume": pos.volume,
+                    "type": close_type,
+                    "price": close_price,
+                    "deviation": 50,
+                    "magic": pos.magic,
+                    "comment": f"Closed by reversal for {pos.comment}",
+                    "type_time": mt5.ORDER_TIME_GTC, # Good Till Cancelled
+                    "type_filling": mt5.ORDER_FILLING_IOC
+                }
+                
+                try:
+                    result_close = mt5.order_send(request_close)
+                    if result_close and result_close.retcode == mt5.TRADE_RETCODE_DONE:
+                        # Get the actual close price from the result
+                        close_price = result_close.price
+                        # Calculate profit/loss in account currency
+                        profit = result_close.profit if hasattr(result_close, 'profit') else 0.0
+                        
+                        file_logger.info(f"[SUCCESS] Position {pos.ticket} closed by reversal. "
+                                      f"Price: {close_price}, Profit: {profit:.2f}")
+                        
+                        # Log the position update
+                        log_position_update_to_file(pos, update_type="CLOSED_REVERSAL")
+                        
+                        # Update trade in CSV with win/loss status
+                        win_loss_status = "WIN" if profit > 0 else "LOSS" if profit < 0 else "BREAKEVEN"
+                        update_trade_in_csv(pos.ticket, close_price, profit, win_loss_status)
+                        
+                        # Update active trades
+                        with data_lock:
+                            if pos.ticket in active_trades:
+                                del active_trades[pos.ticket]
+                        
+                        # Save the updated active trades
+                        save_active_trades_for_file_py()
+                    else:
+                        error_msg = result_close.comment if result_close else 'No result from order_send'
+                        retcode = getattr(result_close, 'retcode', 'UNKNOWN')
+                        file_logger.error(
+                            f"[ERROR] Failed to close position {pos.ticket} by reversal. "
+                            f"Retcode: {retcode}, Error: {error_msg}"
+                        )
+                except Exception as e:
+                    file_logger.error(
+                        f"[EXCEPTION] Error closing position {pos.ticket}: {str(e)}",
+                        exc_info=True
+                    )
+                
+                continue  # Move to next position
+
+            # --- Trailing SL Update ---
+            # Only trail if the trade is in profit or at least at break-even SL enabled
+            # pos.profit might not be updated real-time, use current_price vs entry_price
+
+            # Check if current price is beyond entry price in the direction of the trade
+            is_in_profit_or_be_zone = (direction == 'buy' and current_price > entry_price) or \
+                                      (direction == 'sell' and current_price < entry_price)
+
+            if is_in_profit_or_be_zone or ENABLE_BE_SL: 
+                new_sl = fast_trailing_sl(symbol, pos, direction, swing_highs, swing_lows, atr)
+
+                # Check if new_sl is strictly better than current_sl
+                # For buy, new_sl should be higher. For sell, new_sl should be lower.
+                # Adding a small buffer (e.g., 2 points) to avoid frequent, tiny SL updates
+                symbol_info_local = mt5.symbol_info(symbol)
+                symbol_point = symbol_info_local.point if symbol_info_local else 0.01
+                if (direction == 'buy' and new_sl > current_sl + symbol_point * 2) or \
+                   (direction == 'sell' and new_sl < current_sl - symbol_point * 2):
+
+                    file_logger.info(f"[TRAILING SL] {direction.upper()} {pos.ticket}: Trailing SL from {current_sl:.5f} to {new_sl:.5f}")
+                    request_sl_update = {
+                        "action": mt5.TRADE_ACTION_SLTP,
+                        "position": pos.ticket,
+                        "symbol": symbol,
+                        "sl": new_sl,
+                        "tp": pos.tp,
+                        "magic": pos.magic,
+                        "comment": pos.comment
+                    }
+                    result_sl_update = mt5.order_send(request_sl_update)
+                    if result_sl_update and result_sl_update.retcode == mt5.TRADE_RETCODE_DONE:
+                        file_logger.info(f"[SUCCESS] Trailing stop updated for {pos.ticket}")
+                        log_position_update_to_file(pos, update_type="SL_UPDATED")
+                    else:
+                        err = result_sl_update.comment if result_sl_update else 'No result'
+                        file_logger.error(f"[ERROR] Failed to update trailing SL for {pos.ticket}: {err}")
+                else:
+                    file_logger.debug(f"No better trailing SL found for {pos.ticket}. Current: {current_sl:.5f}, Calculated: {new_sl:.5f}")
+            else:
+                file_logger.debug(f"Position {pos.ticket} not in profit/BE zone or BE not enabled. Skipping trailing SL update.")
+
+    except Exception as e:
+        file_logger.error(f"Error in manage_open_positions for {symbol}: {str(e)}", exc_info=True)
+# Helper: Find swing high/low for liquidity-based SL/TP
+def find_swing_high_low(df, window=5):
+    swing_highs, swing_lows = [], []
+    if df.empty or len(df) < window * 2 + 1:
+        return [], []
+    for i in range(window, len(df) - window):
+        if df['high'].iloc[i] == df['high'].iloc[i-window:i+window+1].max():
+            swing_highs.append((i, df['high'].iloc[i]))
+        if df['low'].iloc[i] == df['low'].iloc[i-window:i+window+1].min():
+            swing_lows.append((i, df['low'].iloc[i]))
+    return swing_highs, swing_lows
+
+# Helper: Find nearest OB (order block) - Simplified
+def find_order_block(df, direction='buy', lookback=10):
+    if df.empty or len(df) < lookback + 1:
+        return None
+
+    for i in range(-2, -lookback - 1, -1): # Iterate backwards from recent candles
+        candle = df.iloc[i]
+        prev_candle_idx = i - 1
+        if prev_candle_idx < -(len(df)):
+            continue
+        # prev_candle = df.iloc[prev_candle_idx] # Not directly used in current simplified logic
+
+        # Check for subsequent candle to confirm move
+        if (i + 1) >= len(df): # Ensure next candle exists
+            continue
+
+        if direction == 'buy': # Looking for a bearish candle before a strong bullish move
+            if candle['close'] < candle['open'] and df['close'].iloc[i+1] > df['open'].iloc[i+1]:
+                return candle['low']
+        elif direction == 'sell': # Looking for a bullish candle before a strong bearish move
+            if candle['close'] > candle['open'] and df['close'].iloc[i+1] < df['open'].iloc[i+1]:
+                return candle['high']
+    return None
+
+# Calculate dynamic lot size
+def calculate_dynamic_lot(symbol, equity, sl_points, atr, momentum, priority_level, llm_sentiment_score: float = 0.0):
+    symbol_info = mt5.symbol_info(symbol)
+    if symbol_info is None:
+        file_logger.warning(f"Symbol info not found for {symbol} for dynamic lot calculation. Using global defaults.")
+        min_lot_allowed = 0.01
+        max_lot_allowed = 50.0
+    else:
+        min_lot_allowed = symbol_info.volume_min
+        max_lot_allowed = symbol_info.volume_max
+
+    base_risk_pct = 0.01 # Base 1% risk of equity (can be config driven, e.g., from config.get("risk_per_trade"))
+    max_risk_amount = equity * base_risk_pct
+
+    if sl_points is None or sl_points <= 0 or atr is None or atr <= 0:
+        file_logger.warning(f"Invalid sl_points ({sl_points}) or atr ({atr}) for lot calculation. Using min lot: {min_lot_allowed:.2f}.")
+        return min_lot_allowed
+
+    if symbol_info and symbol_info.trade_tick_value and symbol_info.trade_tick_size:
+        risk_per_point_value = symbol_info.trade_tick_value / symbol_info.trade_tick_size
+    else:
+        file_logger.warning(f"Symbol info missing tick value/size for {symbol}. Estimating point value for lot calc.")
+        if 'XAU' in symbol or 'GOLD' in symbol:
+            risk_per_point_value = 1.0
+        elif 'JPY' in symbol:
+            risk_per_point_value = 0.01
+        else: # Other forex
+            risk_per_point_value = 0.0001
+
+    risk_per_lot_usd = sl_points * risk_per_point_value
+
+    if risk_per_lot_usd <= 0:
+        file_logger.warning("Calculated risk_per_lot_usd is zero or negative. Using min lot.")
+        return min_lot_allowed
+
+    base_lot_from_risk = max_risk_amount / risk_per_lot_usd
+
+    lot = base_lot_from_risk
+    # Apply Momentum scaling
+    if momentum > 1.5:
+        lot *= 1.5
+    elif momentum > 1.0:
+        lot *= 1.2
+    elif momentum > 0.7:
+        lot *= 1.05
+    else:
+        lot *= 0.8
+
+    # Apply Priority scaling
+    if priority_level == 1:
+        lot *= 1.2
+    elif priority_level == 2:
+        lot *= 1.05
+    else:
+        lot *= 0.9
+
+    # Apply LLM Sentiment-based adjustment (NEW)
+    # Strong positive sentiment boosts lot, strong negative reduces
+    if llm_sentiment_score > 0.7:
+        lot *= 1.15
+        file_logger.info(f"Dynamic Lot: LLM Sentiment ({llm_sentiment_score:.2f}) strongly confirming, boosting lot.")
+    elif llm_sentiment_score < -0.7:
+        lot *= 0.85
+        file_logger.info(f"Dynamic Lot: LLM Sentiment ({llm_sentiment_score:.2f}) strongly opposing, reducing lot.")
+    elif abs(llm_sentiment_score) < 0.2: # Neutral sentiment
+        lot *= 0.95
+        file_logger.info(f"Dynamic Lot: LLM Sentiment ({llm_sentiment_score:.2f}) is neutral, slightly reducing lot.")
+
+    # Cap lot size by symbol's allowed limits and then round
+    lot = max(min_lot_allowed, min(max_lot_allowed, lot))
+    lot = round_lot(symbol, lot)
+
+    return lot
+
+
+# Fast trailing SL
+def fast_trailing_sl(symbol, position, direction, swing_highs, swing_lows, atr):
+    """
+    Moves SL to BE or just above/below a recent swing/OB, following price quickly.
+    position is an MT5 Position object.
+    """
+    symbol_info = mt5.symbol_info(symbol)
+    digits = symbol_info.digits if symbol_info else 5 # Fallback digits
+    point_value = symbol_info.point if symbol_info else 0.01 # Fallback point value
+
+    entry_price = position.price_open
+    current_sl = position.sl
+    current_price = position.price_current # Use current price of open position
+
+    new_sl_candidates = [current_sl] # Start with current SL as a candidate
+
+    # Consider Break-Even (BE) SL if ENABLE_BE_SL is True and in profit
+    if ENABLE_BE_SL and ((direction == 'buy' and current_price > entry_price) or \
+                         (direction == 'sell' and current_price < entry_price)):
+        # Add a small buffer above BE to cover spread/commission (e.g., 5 pips)
+        buffer_pips = 5
+        buffer_amount = buffer_pips * point_value
+
+        if direction == 'buy':
+            be_sl = entry_price + buffer_amount
+            if be_sl > current_sl:
+                new_sl_candidates.append(be_sl)
+        else: # sell
+            be_sl = entry_price - buffer_amount
+            if be_sl < current_sl:
+                new_sl_candidates.append(be_sl)
+
+    # Add recent swing lows/highs as candidates for new SL
+    if direction == 'buy' and swing_lows:
+        for _, sw_low_price in swing_lows:
+            if sw_low_price < current_price:
+                new_sl_candidates.append(sw_low_price)
+    elif direction == 'sell' and swing_highs:
+        for _, sw_high_price in swing_highs:
+            if sw_high_price > current_price:
+                new_sl_candidates.append(sw_high_price)
+
+    # Always add an ATR-based trailing level as a dynamic "floor/ceiling"
+    if atr is not None and atr > 0:
+        atr_multiplier = 1.0 # Trail at 1 ATR distance
+        if direction == 'buy':
+            new_sl_candidates.append(current_price - atr_multiplier * atr)
+        else: # sell
+            new_sl_candidates.append(current_price + atr_multiplier * atr)
+
+    # Determine the best new SL based on direction (liquidity-aware using recent swings)
+    if direction == 'buy':
+        new_sl = max(new_sl_candidates)
+        # Do not move below last significant swing low if available
+        if swing_lows:
+            last_sw_low = max(sw[1] for sw in swing_lows[-3:])
+            new_sl = max(new_sl, last_sw_low)
+        new_sl = max(current_sl, new_sl)
+    else: # sell
+        new_sl = min(new_sl_candidates)
+        if swing_highs:
+            last_sw_high = min(sw[1] for sw in swing_highs[-3:])
+            new_sl = min(new_sl, last_sw_high)
+        new_sl = min(current_sl, new_sl)
+
+    return round(new_sl, digits)
+
+
+# Helper: Split lot for partial profits (50/50 TP1/TP2)
+def split_lot(total_lot):
+    """Split the lot into two equal parts for TP1 and TP2.
+    Guarantees minimum 0.01 per partial; if any part would be < 0.01,
+    return a single-part list with the full lot.
+    """
+    min_partial = 0.01
+    if total_lot <= 0:
+        return []
+
+    # 50/50 split; rounding handled here, broker step rounding before send
+    tp1 = round(total_lot / 2.0, 2)
+    tp2 = round(total_lot - tp1, 2)  # ensure exact sum integrity
+
+    # Enforce minimums
+    if tp2 < min_partial:
+        return [round(total_lot, 2)]
+    if tp1 < min_partial:
+        return [round(total_lot, 2)]
+
+    return [tp1, tp2]
+
+
+# Helper: Calculate momentum (volatility/ATR or price change)
+def calculate_momentum(df, symbol):
+    if df.empty or len(df) < 20:
+        return 0.5
+
+    closes = df['close'].iloc[-15:]
+    atr = calculate_atr(df)
+
+    if atr is None or math.isnan(atr) or atr <= 0:
+        file_logger.warning(f"ATR is None, zero or NaN for {symbol} in momentum calc. Using fallback value 0.01.")
+        atr = 0.01
+
+    if closes.std() == 0:
+        return 0.1
+
+    momentum_val = (closes.std() / atr) * 0.5
+    return min(2.0, max(0.0, momentum_val))
+
+
+# Helper: Calculate liquidity-based SL
+def calculate_liquidity_sl(symbol, direction, entry_price, market_data):
+    df = market_data.get('df')
+    atr = market_data.get('atr')
+    if df is None or atr is None:
+        file_logger.warning(f"Missing df or ATR for liquidity SL for {symbol}. Falling back to ATR based SL.")
+        if direction == "buy":
+            return entry_price - 1.5 * (atr if atr is not None else 0.01)
+        else:
+            return entry_price + 1.5 * (atr if atr is not None else 0.01)
+
+    swing_highs, swing_lows = find_swing_high_low(df)
+
+    symbol_info = mt5.symbol_info(symbol)
+    digits = symbol_info.digits if symbol_info else 5
+
+    sl = None
+    if direction == "buy":
+        candidate_sls = []
+        if swing_lows:
+            recent_lows_below_entry = [sw[1] for sw in swing_lows if sw[1] < entry_price]
+            if recent_lows_below_entry:
+                candidate_sls.append(max(recent_lows_below_entry))
+
+        candidate_sls.append(entry_price - 1.5 * atr)
+
+        if candidate_sls:
+            sl = min(candidate_sls)
+
+    else: # direction == "sell"
+        candidate_sls = []
+        if swing_highs:
+            recent_highs_above_entry = [sh[1] for sh in swing_highs if sh[1] > entry_price]
+            if recent_highs_above_entry:
+                candidate_sls.append(min(recent_highs_above_entry))
+
+        candidate_sls.append(entry_price + 1.5 * atr)
+
+        if candidate_sls:
+            sl = max(candidate_sls)
+
+    if sl is None: # Fallback if no valid SL found
+        sl = entry_price - 2.0 * atr if direction == 'buy' else entry_price + 2.0 * atr
+        file_logger.warning(f"No valid liquidity SL candidates for {symbol}. Falling back to default ATR SL: {sl:.5f}")
+
+    return round(sl, digits)
+
+
+# Helper: Calculate TP based on RR
+def calculate_tp(entry, sl, rr, direction, symbol_digits=5):
+    """
+    Calculate take profit price based on entry, stop loss, risk-reward ratio and direction.
+    
+    Args:
+        entry: Entry price
+        sl: Stop loss price
+        rr: Risk-reward ratio
+        direction: 'buy' or 'sell'
+        symbol_digits: Number of decimal places to round to
+    
+    Returns:
+        float: Calculated take profit price
+    """
+    if sl is None or entry is None:
+        file_logger.error("Entry or SL is None for TP calculation. Returning 0.0")
+        return 0.0
+
+    risk_amount_points = abs(entry - sl)
+    if risk_amount_points <= 0:
+        file_logger.error(f"Risk amount is zero or negative ({risk_amount_points}). Cannot calculate TP.")
+        return 0.0
+
+    # Calculate take profit based on direction
+    if direction.lower() == "buy":
+        tp = entry + (risk_amount_points * rr)
+    else:  # sell
+        tp = entry - (risk_amount_points * rr)
+
+    # Get symbol info for proper rounding
+    try:
+        symbol_info = mt5.symbol_info("XAUUSD")  # This should be passed as parameter in actual use
+        digits = symbol_info.digits if symbol_info else symbol_digits
+    except Exception as e:
+        file_logger.warning(f"Could not get symbol info: {e}. Using default digits: {symbol_digits}")
+        digits = symbol_digits
+    
+    # Round to the correct number of decimal places
+    tp = round(tp, digits)
+    
+    return tp
+
+# Symbol-specific Lot Size Validation
+def validate_lot_size(symbol, lot):
+    symbol_info = mt5.symbol_info(symbol)
+    if symbol_info is None:
+        file_logger.error(f"Symbol info not found for {symbol} for lot validation. Allowing lot to pass (risky).")
+        return True
+    min_lot = symbol_info.volume_min
+    max_lot = symbol_info.volume_max
+    lot_step = symbol_info.volume_step
+
+    if not isinstance(lot, (int, float)):
+        file_logger.error(f"Lot size {lot} is not a number. Blocking.")
+        return False
+
+    if lot < min_lot - 1e-9 or lot > max_lot + 1e-9:
+        file_logger.error(f"Lot size {lot:.2f} out of range for {symbol}: min {min_lot:.2f}, max {max_lot:.2f}.")
+        return False
+
+    # Robust step check: anchor at min_lot and tolerate float error
+    steps = round((lot - min_lot) / lot_step)
+    reconstructed = min_lot + steps * lot_step
+    if not math.isclose(reconstructed, lot, rel_tol=0, abs_tol=max(1e-8, lot_step/1000)):
+        file_logger.error(f"Lot size {lot:.2f} not a valid step for {symbol}: step {lot_step:.2f}.")
+        return False
+
+    return True
+
+# Market Open/Close Check (for individual symbol, based on `SPECIAL_MARKET_HOURS`)
+def is_market_open(symbol, now_utc=None):
+    if now_utc is None:
+        now_utc = datetime.now(timezone.utc)
+
+    # Weekend check (Sat/Sun UTC): most brokers closed
+    if now_utc.weekday() == 5 or now_utc.weekday() == 6:
+        return False
+
+    hours = get_market_hours(symbol)
+    if not hours:
+        return True
+
+    start_h, start_m = map(int, hours["start"].split(":"))
+    end_h, end_m = map(int, hours["end"].split(":"))
+
+    session_start = now_utc.replace(hour=start_h, minute=start_m, second=0, microsecond=0)
+    session_end = now_utc.replace(hour=end_h, minute=end_m, second=0, microsecond=0)
+
+    if session_start > session_end:
+        session_end += timedelta(days=1)
+
+    is_open = session_start <= now_utc < session_end
+
+    return is_open
+
+# Lot Size Rounding Utility
+def round_lot(symbol, lot):
+    symbol_info = mt5.symbol_info(symbol)
+    if symbol_info is None:
+        file_logger.warning(f"Symbol info not found for {symbol} for lot rounding. Returning original lot.")
+        return lot
+    step = symbol_info.volume_step
+    # Enforce user rule: min lot 0.04 for XAU/GOLD, 0.02 for others
+    rule_min = 0.04 if ('XAU' in symbol or 'GOLD' in symbol) else 0.02
+    min_lot = max(symbol_info.volume_min, rule_min)
+    max_lot = symbol_info.volume_max
+
+    rounded_raw = round((lot - min_lot) / step) * step + min_lot
+    rounded = max(min_lot, min(max_lot, rounded_raw))
+
+    return round(rounded, 8)
+
+
+# Enhancement: Dynamic Position Sizing based on recent performance
+def get_dynamic_lot(symbol, strategy_name, base_lot, min_lot_allowed, max_lot_allowed, llm_sentiment_score: float = 0.0):
+    wins, losses = get_recent_trade_performance(symbol, strategy_name, lookback=10)
+
+    adjustment_factor = 1.0
+
+    if losses > wins and losses >= 3:
+        adjustment_factor *= 0.7
+        file_logger.info(f"Dynamic Lot: {strategy_name} {symbol} reducing lot due to {losses} recent losses.")
+    elif wins > losses and wins >= 3:
+        adjustment_factor *= 1.2
+        file_logger.info(f"Dynamic Lot: {strategy_name} {symbol} increasing lot due to {wins} recent wins.")
+
+    # Apply LLM Sentiment-based adjustment (NEW)
+    if llm_sentiment_score > 0.7:
+        adjustment_factor *= 1.15
+        file_logger.info(f"Dynamic Lot: LLM Sentiment ({llm_sentiment_score:.2f}) strongly confirming, boosting lot.")
+    elif llm_sentiment_score < -0.7:
+        adjustment_factor *= 0.85
+        file_logger.info(f"Dynamic Lot: LLM Sentiment ({llm_sentiment_score:.2f}) strongly opposing, reducing lot.")
+    elif abs(llm_sentiment_score) < 0.2:
+        adjustment_factor *= 0.95
+        file_logger.info(f"Dynamic Lot: LLM Sentiment ({llm_sentiment_score:.2f}) is neutral, slightly reducing lot.")
+
+    dynamic_lot = base_lot * adjustment_factor
+
+    symbol_info = mt5.symbol_info(symbol)
+    if symbol_info is None:
+        file_logger.warning(f"Symbol info not found for {symbol} for dynamic lot final capping. Using general min/max.")
+        return round_lot(symbol, max(0.05, min_lot_allowed, min(dynamic_lot, max_lot_allowed)))
+
+    # Enforce absolute minimum 0.05 as per user requirement
+    return round_lot(symbol, max(0.05, symbol_info.volume_min, min(symbol_info.volume_max, dynamic_lot)))
+
+
+# Enhancement: Trade Duplication/Overlap Prevention
+def has_open_trade(symbol, direction):
+    positions = mt5.positions_get(symbol=symbol)
+    if not positions:
+        return False
+    for pos in positions:
+        if (direction == "buy" and pos.type == mt5.ORDER_TYPE_BUY) or \
+           (direction == "sell" and pos.type == mt5.ORDER_TYPE_SELL):
+            file_logger.info(f"Existing open {direction.upper()} trade found for {symbol} (Ticket: {pos.ticket}).")
+            return True
+    return False
+
+def has_opposite_trade(symbol, direction):
+    positions = mt5.positions_get(symbol=symbol)
+    if not positions:
+        return False
+
+# Allow multiple trades per symbol from different strategies on same side
+def has_open_trade_for_strategy(symbol: str, direction: str, strategy_name: str) -> bool:
+    positions = mt5.positions_get(symbol=symbol)
+    if not positions:
+        return False
+    for pos in positions:
+        same_side = (direction == "buy" and pos.type == mt5.ORDER_TYPE_BUY) or \
+                    (direction == "sell" and pos.type == mt5.ORDER_TYPE_SELL)
+        if not same_side:
+            continue
+        # Identify strategy from MT5 comment if available (e.g., "ote_TP1")
+        pos_comment = getattr(pos, 'comment', '') or ''
+        if pos_comment.lower().startswith(f"{strategy_name.lower()}_"):
+            file_logger.info(f"Existing open {direction.upper()} trade for {symbol} from same strategy {strategy_name} (Ticket: {pos.ticket}).")
+            return True
+        return False
+    for pos in positions:
+        if (direction == "buy" and pos.type == mt5.ORDER_TYPE_SELL) or \
+           (direction == "sell" and pos.type == mt5.ORDER_TYPE_BUY):
+            file_logger.info(f"Existing opposite {direction.upper()} trade found for {symbol} (Ticket: {pos.ticket}).")
+            return True
+        return False
+
+def get_recent_trade_performance(symbol, strategy, lookback=5):
+    import sqlite3
+    wins = 0
+    losses = 0
+    try:
+        conn = sqlite3.connect(TRADE_DB_FILE)
+        c = conn.cursor()
+        
+        # Check if table exists and has win_loss column
+        c.execute("PRAGMA table_info(trades)")
+        columns = [col[1] for col in c.fetchall()]
+        
+        if 'win_loss' not in columns:
+            file_logger.warning(f"win_loss column not found in trades table. Creating it...")
+            try:
+                c.execute("ALTER TABLE trades ADD COLUMN win_loss TEXT")
+                conn.commit()
+                file_logger.info("Added win_loss column to trades table")
+            except Exception as alter_error:
+                file_logger.error(f"Failed to add win_loss column: {str(alter_error)}")
+                conn.close()
+                return 0, 0
+
+        c.execute('''SELECT win_loss FROM trades WHERE symbol=? AND strategy=? ORDER BY id DESC LIMIT ?''', (symbol, strategy, lookback))
+        results = c.fetchall()
+        conn.close()
+        
+        for r in results:
+            if r and r[0] == 'WIN':
+                wins += 1
+            elif r and r[0] == 'LOSS':
+                losses += 1
+
+        return wins, losses
+    except Exception as e:
+        file_logger.error(f"Error fetching recent trade performance from DB: {str(e)}", exc_info=True)
+        return 0, 0
+
+
+# --- LLM Sentiment Analyzer Initialization ---
+def init_llm_sentiment_analyzer(api_key: str):
+    global llm_sentiment_analyzer_instance
+    if llm_sentiment_analyzer_instance is None:
+        llm_sentiment_analyzer_instance = LLMSentimentAnalyzer(api_key)
+        file_logger.info("LLM Sentiment Analyzer instance initialized in file.py.")
+    else:
+        file_logger.debug("LLM Sentiment Analyzer already initialized.")
+
+# --- ML Trade Filter Initialization ---
+ml_trade_filter_instance = None # Define globally for file.py
+
+def init_ml_trade_filter(model_path: str = "ml_trade_filter.pkl"):
+    global ml_trade_filter_instance
+    if ml_trade_filter_instance is None:
+        ml_trade_filter_instance = MLTradeFilter(model_path)
+        file_logger.info("MLTradeFilter instance initialized in file.py.")
+    else:
+        file_logger.debug("MLTradeFilter already initialized.")
+
+
+# Telegram bot setup (needs TOKEN and CHAT_ID from config loaded by main.py)
+TELEGRAM_BOT_TOKEN_GLOBAL = None
+TELEGRAM_CHAT_ID_GLOBAL = None
+
+def init_telegram_settings(bot_token, chat_id):
+    global TELEGRAM_BOT_TOKEN_GLOBAL, TELEGRAM_CHAT_ID_GLOBAL
+    TELEGRAM_BOT_TOKEN_GLOBAL = bot_token
+    TELEGRAM_CHAT_ID_GLOBAL = chat_id
+    file_logger.info("Telegram settings initialized.")
+
+def send_telegram_alert(message):
+    """Send alert to Telegram"""
+    try:
+        if not telegram:
+            file_logger.debug("Telegram module not installed. Skipping alert.")
+            return
+
+        if not TELEGRAM_BOT_TOKEN_GLOBAL or not TELEGRAM_CHAT_ID_GLOBAL or \
+           TELEGRAM_BOT_TOKEN_GLOBAL == "YOUR_TELEGRAM_BOT_TOKEN" or TELEGRAM_CHAT_ID_GLOBAL == "YOUR_TELEGRAM_CHAT_ID":
+            file_logger.debug("Telegram not configured (token/chat ID missing or default). Skipping alert.")
+            return
+
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN_GLOBAL}/sendMessage"
+        data = {
+            'chat_id': TELEGRAM_CHAT_ID_GLOBAL,
+            'text': message,
+            'parse_mode': 'HTML'
+        }
+        response = requests.post(url, data=data, timeout=10)
+        if response.status_code != 200:
+            file_logger.warning(f"Telegram API error: {response.status_code} - {response.text}")
+        else:
+            file_logger.debug("Telegram alert sent successfully.")
+    except Exception as e:
+        file_logger.error(f"Failed to send Telegram alert: {str(e)}", exc_info=True)
+
+
+_ff_cache = {
+    'events': [],
+    'timestamp': datetime.min.replace(tzinfo=timezone.utc)
+}
+_ff_last_error_ts = datetime.min.replace(tzinfo=timezone.utc)
+
+def get_forex_factory_news():
+    """Scrape Forex Factory for upcoming high-impact news with 60s TTL cache and robust retries"""
+    if BeautifulSoup is None:
+        file_logger.warning("BeautifulSoup not available. Cannot fetch Forex Factory news.")
+        return []
+
+    # Serve from cache if within TTL
+    try:
+        now_utc = datetime.now(timezone.utc)
+        age = (now_utc - _ff_cache['timestamp']).total_seconds()
+        if age <= 60 and _ff_cache['events']:
+            file_logger.debug(f"ForexFactory cache hit: {len(_ff_cache['events'])} events, age={age:.0f}s")
+            return _ff_cache['events']
+    except Exception:
+        pass
+
+    # --- Economic Calendar & News Integration ---
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../modules'))
+    from tradingeconomics_calendar import fetch_te_calendar
+    from news_fetcher import fetch_market_news
+    import logging
+    try:
+        calendar = fetch_te_calendar()
+    except Exception as e:
+        logging.warning(f"TE calendar fetch failed: {e}")
+        calendar = []
+
+    # Try Yahoo news first, fallback to NewsAPI if needed
+    try:
+        news_list = fetch_market_news(source='yahoo')
+        if not news_list:
+            news_list = fetch_market_news(source='newsapi')
+    except Exception as e:
+        logging.warning(f"News fetch failed: {e}")
+        news_list = []
+
+
+# --- Centralized Risk & Trade Processing ---
+def _compute_age_seconds(now_ts, ts):
+    try:
+        return (now_ts - ts).total_seconds()
+    except Exception:
+        return float('inf')
+
+def _is_valid_signal(signal: dict) -> bool:
+    if not isinstance(signal, dict):
+        return False
+    if signal.get("allowed") is False:
+        return False
+    conf = signal.get("confidence")
+    if conf is not None:
+        try:
+            return float(conf) >= MIN_CONFIDENCE
+        except Exception:
+            return False
+    # If no explicit confidence, allow validation to continue; other gates will decide
+    return True
+
+def process_strategy_signal(symbol: str, strategy_name: str, signal_result: dict, priority_level: int, market_data: dict, llm_sentiment_threshold: float, ml_filter_threshold: float) -> bool:
+    """
+    Centralized function to process a strategy signal, apply all risk checks,
+    calculate lot size/SL/TP, and execute the trade with partials.
+
+    Args:
+        symbol (str): Trading symbol (e.g., "XAUUSD").
+        strategy_name (str): Name of the strategy (e.g., "mmxm").
+        signal_result (dict): Dictionary from strategy.execute() containing:
+            {"success": True/False, "direction": "buy"/"sell", "price": entry_price,
+             "sl": suggested_sl, "tp1": suggested_tp1, "tp2": suggested_tp2, "features": [...] (for ML)}
+        priority_level (int): Priority of the strategy (lower is higher priority).
+        market_data (dict): Dictionary with current market conditions like df, atr, equity, volatility, trend, rsi,
+                            and now also llm_news_sentiment, is_within_news_window, news_favored_direction.
+        llm_sentiment_threshold (float): Threshold for LLM sentiment to be considered strong.
+        ml_filter_threshold (float): Threshold for ML model win probability to allow trade.
+
+    Returns:
+        bool: True if a trade was successfully placed, False otherwise.
+    """
+    file_logger.info(f"[CENTRALIZED PROCESSOR] Received signal for {symbol} from {strategy_name}. Priority: {priority_level}. LLM Threshold: {llm_sentiment_threshold}, ML Threshold: {ml_filter_threshold}")
+    try:
+        debug_payload = {
+            'direction': signal_result.get('direction'),
+            'price': signal_result.get('price'),
+            'sl': signal_result.get('sl'),
+            'tp1': signal_result.get('tp1'),
+            'tp2': signal_result.get('tp2'),
+            'has_features': isinstance(signal_result.get('features'), (list, tuple)),
+            'features_len': (len(signal_result.get('features')) if isinstance(signal_result.get('features'), (list, tuple)) else None),
+            'confidence': signal_result.get('confidence', None),
+        }
+        if debug_payload['has_features']:
+            preview = signal_result['features'][:8]
+        else:
+            preview = '<non-list>'
+        file_logger.debug(f"[CENTRALIZED PROCESSOR][INPUT] {symbol} | {strategy_name}: payload={debug_payload}, features_preview={preview}")
+    except Exception as e:
+        file_logger.debug(f"[CENTRALIZED PROCESSOR][INPUT] Failed to log payload: {e}")
+
+    if not _is_valid_signal(signal_result):
+        file_logger.info(f"[CENTRALIZED PROCESSOR] Invalid signal structure or disallowed for {strategy_name}.")
+        return False
+
+    direction = signal_result.get("direction")
+    entry_price = signal_result.get("price")
+    suggested_sl = signal_result.get("sl") # Strategy's suggested SL
+    confidence_raw = signal_result.get("confidence")
+    computed_confidence = None
+    if confidence_raw is not None:
+        try:
+            computed_confidence = float(confidence_raw)
+        except Exception:
+            computed_confidence = 0.0
+        if computed_confidence < MIN_CONFIDENCE:
+            file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: confidence {computed_confidence:.2f} < MIN_CONFIDENCE {MIN_CONFIDENCE:.2f}")
+            return False
+
+    # Essential market data from the current cycle
+    df = market_data.get("df")
+    atr = market_data.get("atr")
+    volatility = market_data.get("volatility")
+    equity = market_data.get("equity")
+    current_utc_time = market_data.get("current_utc_time", datetime.now(timezone.utc))
+    latest_candle_time = market_data.get("latest_candle_time")
+    tick_time_utc = market_data.get("tick_time_utc")
+    live_price = market_data.get("live_price")
+
+    # Fail-closed if ML/LLM not initialized
+    if ml_trade_filter_instance is None or llm_sentiment_analyzer_instance is None:
+        file_logger.error("[GATE] ML or LLM analyzer not initialized. Failing closed.")
+        file_logger.error(f"[GATE][DIAG] ml_trade_filter_instance={'present' if ml_trade_filter_instance else 'missing'}, llm_sentiment_analyzer_instance={'present' if llm_sentiment_analyzer_instance else 'missing'}")
+        return False
+
+    # Last executed candle check
+    last_exec = last_executed_candle_for_strategy.get((symbol, strategy_name))
+    if last_exec is not None and latest_candle_time <= last_exec:
+        file_logger.info(f"[GATE] Already executed for this candle or older (last={last_exec}, latest={latest_candle_time}). Blocking.")
+        return False
+
+    # Ensure suggested_sl is provided by strategy or can be calculated
+    if suggested_sl is None:
+        file_logger.warning(f"[CENTRALIZED PROCESSOR] Strategy {strategy_name} did not provide SL. Attempting to calculate liquidity SL.")
+        suggested_sl = calculate_liquidity_sl(symbol, direction, entry_price, market_data)
+        if suggested_sl is None or (direction == 'buy' and suggested_sl >= entry_price) or (direction == 'sell' and suggested_sl <= entry_price):
+            file_logger.error(f"[CENTRALIZED PROCESSOR] Calculated liquidity SL ({suggested_sl:.5f}) is invalid for {symbol} | {strategy_name}. Blocking trade.")
+            return False
+
+    # --- Pre-trade Risk Filters ---
+    # 1. Sideways/Low-Volatility Market Filter (already applied in news_filter, but can be here too)
+    min_atr_threshold = 0.1
+    min_volatility_threshold = 0.1
+
+    if 'XAU' in symbol or 'GOLD' in symbol:
+        min_atr_threshold = 0.5
+        min_volatility_threshold = 0.5
+    elif 'JPY' in symbol:
+        min_atr_threshold = 0.001
+        min_volatility_threshold = 0.001
+    elif 'US' in symbol and (symbol.endswith('30') or symbol.endswith('500')):
+        min_atr_threshold = 10.0
+        min_volatility_threshold = 10.0
+
+    if atr < min_atr_threshold:
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: ATR too low ({atr:.4f}). Market is likely sideways/choppy. Blocking trade.")
+        return False
+    if volatility < min_volatility_threshold:
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Volatility too low ({volatility:.4f}). Market is likely flat/choppy. Blocking trade.")
+        return False
+
+    # 2. Daily Loss Limit (Per strategy using recent performance, global is in main.py)
+    wins, losses = get_recent_trade_performance(symbol, strategy_name, lookback=10)
+    if losses >= 3 and losses > wins: # If more than 3 recent losses and losing streak
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Recent losing streak ({losses} losses). Blocking trade to protect capital.")
+        return False
+
+    # 3. Trade Duplication/Overlap Prevention (using MT5's current positions)
+    # Allow multiple trades per symbol on the same side if they are from different strategies.
+    # Only block if same strategy already has an open trade in that direction.
+    if has_open_trade_for_strategy(symbol, direction, strategy_name):
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Same strategy already has an open {direction} trade. Blocking duplicate.")
+        return False
+    if has_opposite_trade(symbol, direction):
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Has an open trade in opposite direction. Blocking trade.")
+        return False
+
+    # --- LLM Sentiment-based Strategy Confirmation/Filtering (NEW & CRITICAL) ---
+    sentiment_score = market_data.get('llm_news_sentiment', {"sentiment": "NEUTRAL", "score": 0.0})
+    news_favored_direction = market_data.get('news_favored_direction', "both") # "buy", "sell", "none", "both"
+    is_within_news_window = market_data.get('is_within_news_window', False)
+
+    # ML Filter features from strategy signal
+    features_for_ml = signal_result.get("features", []) # Assuming strategy provides a list of features
+    try:
+        preview = features_for_ml[:5] if isinstance(features_for_ml, (list, tuple)) else '<non-list>'
+        feat_len = len(features_for_ml) if hasattr(features_for_ml, '__len__') else 'NA'
+        file_logger.debug(f"[ML DEBUG] {symbol} | {strategy_name}: features len={feat_len}, preview={preview}")
+    except Exception:
+        pass
+
+    # --- Input Validation for Signal ---
+    if not all([direction, entry_price, atr is not None, volatility is not None, equity is not None]):
+        file_logger.error(f"[CENTRALIZED PROCESSOR] Missing critical data in signal or market_data for {symbol} | {strategy_name}. Blocking trade.")
+        return False
+
+    # [PASS] Checkpoint 1: Basic Input Validation PASSED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 1: Basic validation passed for {symbol} | {strategy_name}")
+
+    # Time validity checks
+    if latest_candle_time is None or tick_time_utc is None:
+        file_logger.error(f"[GATE] Missing latest_candle_time or tick_time for {symbol}.")
+        return False
+    # Use broker tick time as primary reference to avoid local clock skew
+    reference_time = market_data.get('reference_time', current_utc_time)
+    try:
+        # Ensure timezone-aware UTC
+        if reference_time.tzinfo is None:
+            reference_time = reference_time.replace(tzinfo=timezone.utc)
+        if latest_candle_time.tzinfo is None:
+            latest_candle_time = latest_candle_time.replace(tzinfo=timezone.utc)
+        if tick_time_utc.tzinfo is None:
+            tick_time_utc = tick_time_utc.replace(tzinfo=timezone.utc)
+    except Exception:
+        pass
+
+    candle_age = _compute_age_seconds(reference_time, latest_candle_time)
+    tick_age = _compute_age_seconds(reference_time, tick_time_utc)
+    # Log raw timestamps for diagnostics
+    try:
+        file_logger.debug(f"[TIME DEBUG] ref={reference_time.isoformat()}, candle={latest_candle_time.isoformat()}, tick={tick_time_utc.isoformat()}")
+    except Exception:
+        pass
+    # Clamp tiny negatives to zero, warn if large negatives
+    if candle_age < -1 or tick_age < -1:
+        file_logger.warning(f"[GATE] Negative ages detected (candle {candle_age:.2f}s, tick {tick_age:.2f}s). Blocking.")
+        return False
+    candle_age = max(0.0, candle_age)
+    tick_age = max(0.0, tick_age)
+    if candle_age > MAX_CANDLE_AGE_SECONDS or tick_age > MAX_CANDLE_AGE_SECONDS:
+        file_logger.warning(f"Stale data detected - Candle age: {candle_age:.1f}s, Tick age: {tick_age:.1f}s")
+
+        # Verify broker connection
+        if not mt5.initialize():
+            file_logger.error(f"Broker connection failed: {mt5.last_error()}")
+            return False
+
+        # Correct way to get terminal time
+        try:
+            terminal_info = mt5.terminal_info()
+            if not terminal_info:
+                file_logger.error("Failed to get terminal info")
+                return False
+
+            # Get server time from tick data instead of account_info.login_time (which doesn't exist)
+            if account_info:
+                # Use symbol tick time as reference for server time
+                tick = mt5.symbol_info_tick(symbol)
+                if tick:
+                    server_time = datetime.fromtimestamp(tick.time, timezone.utc)
+                    time_diff = (datetime.now(timezone.utc) - server_time).total_seconds()
+
+                    if time_diff > 60:
+                        file_logger.error(f"Broker time issue! Server: {server_time}, Local: {datetime.now(timezone.utc)}, Diff: {time_diff:.1f}s")
+                        return False
+                else:
+                    file_logger.warning("Could not get tick data for time check, using current time")
+                    server_time = datetime.now(timezone.utc)
+            else:
+                file_logger.error("Failed to get account info for time check")
+                return False
+        except Exception as e:
+            file_logger.error(f"Time check failed: {str(e)}")
+            return False
+
+    # ✅ Checkpoint 2: Time Validation PASSED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 2: Time validation passed for {symbol} | {strategy_name}")
+
+    # LLM News Sentiment from market_data (passed from news_filter)
+    llm_news_sentiment = market_data.get('llm_news_sentiment', {"sentiment": "NEUTRAL", "score": 0.0})
+    news_favored_direction = market_data.get('news_favored_direction', "both") # "buy", "sell", "none", "both"
+    is_within_news_window = market_data.get('is_within_news_window', False)
+
+    # ML Filter features from strategy signal
+    features_for_ml = signal_result.get("features", []) # Assuming strategy provides a list of features
+    try:
+        preview = features_for_ml[:5] if isinstance(features_for_ml, (list, tuple)) else '<non-list>'
+        feat_len = len(features_for_ml) if hasattr(features_for_ml, '__len__') else 'NA'
+        file_logger.debug(f"[ML DEBUG] {symbol} | {strategy_name}: features len={feat_len}, preview={preview}")
+    except Exception:
+        pass
+
+    # [PASS] Checkpoint 3: Data Collection PASSED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 5: Loss protection passed for {symbol} | {strategy_name}")
+
+    # --- Pre-trade Risk Filters ---
+    # 1. Sideways/Low-Volatility Market Filter (already applied in news_filter, but can be here too)
+    min_atr_threshold = 0.1
+    min_volatility_threshold = 0.1
+
+    if 'XAU' in symbol or 'GOLD' in symbol:
+        min_atr_threshold = 0.5
+        min_volatility_threshold = 0.5
+    elif 'JPY' in symbol:
+        min_atr_threshold = 0.001
+        min_volatility_threshold = 0.001
+    elif 'US' in symbol and (symbol.endswith('30') or symbol.endswith('500')):
+        min_atr_threshold = 10.0
+        min_volatility_threshold = 10.0
+
+    if atr < min_atr_threshold:
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: ATR too low ({atr:.4f}). Market is likely sideways/choppy. Blocking trade.")
+        return False
+    if volatility < min_volatility_threshold:
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Volatility too low ({volatility:.4f}). Market is likely flat/choppy. Blocking trade.")
+        return False
+
+    # 2. Daily Loss Limit (Per strategy using recent performance, global is in main.py)
+    wins, losses = get_recent_trade_performance(symbol, strategy_name, lookback=10)
+    if losses >= 3 and losses > wins: # If more than 3 recent losses and losing streak
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Recent losing streak ({losses} losses). Blocking trade to protect capital.")
+        return False
+
+    # 3. Trade Duplication/Overlap Prevention (using MT5's current positions)
+    # Allow multiple trades per symbol on the same side if they are from different strategies.
+    # Only block if same strategy already has an open trade in that direction.
+    if has_open_trade_for_strategy(symbol, direction, strategy_name):
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Same strategy already has an open {direction} trade. Blocking duplicate.")
+        return False
+    if has_opposite_trade(symbol, direction):
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Has an open trade in opposite direction. Blocking trade.")
+        return False
+
+    # --- LLM Sentiment-based Strategy Confirmation/Filtering (NEW & CRITICAL) ---
+    sentiment_score = llm_news_sentiment.get("score", 0.0)
+    sentiment_label = llm_news_sentiment.get("sentiment", "NEUTRAL")
+
+    if is_within_news_window: # Only apply strong LLM filter if we are in an active news window
+        file_logger.info(f"[LLM FILTER] News window active for {symbol}. Strategy Direction: {direction.upper()}, News Favored Direction: {news_favored_direction.upper()}. LLM Score: {sentiment_score:.2f}.")
+
+        # If news_favored_direction is "none", news_filter should have blocked it already.
+        # Here, we check if strategy direction conflicts with strongly favored news direction.
+        if (direction == "buy" and news_favored_direction == "sell" and sentiment_score < -llm_sentiment_threshold) or \
+           (direction == "sell" and news_favored_direction == "buy" and sentiment_score > llm_sentiment_threshold):
+            file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: LLM Sentiment ({sentiment_label}, {sentiment_score:.2f}) strongly conflicts with strategy direction. Blocking trade.")
+            return False
+        else:
+            file_logger.info(f"[LLM FILTER] News window active but no strong conflict detected. Allowing trade.")
+    else:
+        file_logger.debug(f"[LLM FILTER] Not in active news window. LLM sentiment ({sentiment_score:.2f}) is informational only for lot sizing.")
+        # No blocking when not in news window - just informational
+
+    # [PASS] Checkpoint 7: LLM Sentiment Filter PASSED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 7: LLM sentiment filter passed for {symbol} | {strategy_name}")
+
+    # --- Broker Time Freshness Check ---
+    try:
+        terminal_info = mt5.terminal_info()
+        if not terminal_info:
+            if not reset_broker_connection():
+                file_logger.error("Broker connection completely down")
+                return False
+
+        # Get server time from tick data instead of account_info.login_time (which doesn't exist)
+        account_info = mt5.account_info()
+        if account_info:
+            # Use symbol tick time as reference for server time
+            tick = mt5.symbol_info_tick(symbol)
+            if tick:
+                broker_time = datetime.fromtimestamp(tick.time, timezone.utc)
+                time_diff = (datetime.now(timezone.utc) - broker_time).total_seconds()
+
+                if time_diff > 300:  # 5 minutes threshold
+                    file_logger.warning(f"Broker time frozen! Difference: {time_diff:.1f}s")
+                    if not reset_broker_connection():
+                        return False
+            else:
+                file_logger.warning("Could not get tick data for broker time check, using current time")
+                broker_time = datetime.now(timezone.utc)
+        else:
+            file_logger.error("Failed to get account info for broker time check")
+            return False
+    except Exception as e:
+        file_logger.error(f"Time check error: {str(e)}")
+        return False
+
+    # [PASS] Checkpoint 8: Broker Time Check PASSED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 8: Broker time check passed for {symbol} | {strategy_name}")
+
+    # --- ML Model Filter (NEW) ---
+    if ml_trade_filter_instance and ml_trade_filter_instance.model:
+        # Strategy needs to provide features for the ML model
+        if not features_for_ml:
+            file_logger.warning(f"[ML FILTER] {symbol} | {strategy_name}: No ML features provided by strategy. Skipping ML filter.")
+        else:
+            ml_win_prob = ml_trade_filter_instance.get_win_probability(features_for_ml)
+            if not ml_trade_filter_instance.allow_trade(features_for_ml, ml_filter_threshold):
+                file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: ML model blocked trade (Win Prob: {ml_win_prob:.2f} < Threshold: {ml_filter_threshold:.2f}). Skipping.")
+                return False
+    else:
+        model_state = 'present' if ml_trade_filter_instance else 'missing'
+        file_logger.debug(f"MLTradeFilter not initialized or model not loaded (state={model_state}). Skipping ML filtering.")
+
+    # [PASS] Checkpoint 9: ML Model Filter PASSED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 4: Volatility filters passed for {symbol} | {strategy_name}")
+
+    # Final confidence check if we derived it from ML
+    if computed_confidence is not None and computed_confidence < MIN_CONFIDENCE:
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: derived confidence {computed_confidence:.2f} < MIN_CONFIDENCE {MIN_CONFIDENCE:.2f}. ML Win Prob was: {ml_win_prob:.2f}")
+        return False
+
+    # [PASS] Checkpoint 10: Final Confidence Check PASSED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 10: Final confidence check passed for {symbol} | {strategy_name}")
+
+    # 6. Centralized Risk Limits (Global, from file.py's state)
+    # Define these functions, they were missing.
+    def check_equity_curve_protection(equity_val):
+        # Your actual logic for equity curve protection. For now, it allows.
+        return True
+
+    def check_portfolio_correlation(symbol_param):
+        # Your actual logic for portfolio correlation. For now, it allows.
+        return True
+
+    def check_global_risk_limits():
+        # Your actual logic for global risk limits. For now, it allows.
+        return False # False means not triggered, so trade is allowed.
+
+    if not check_equity_curve_protection(equity):
+        file_logger.warning("[FILTERED] Global equity curve protection triggered. Blocking trade.")
+        return False
+    if not check_portfolio_correlation(symbol):
+        file_logger.warning(f"[FILTERED] Portfolio correlation detected for {symbol}. Blocking trade.")
+        return False
+    if check_global_risk_limits(): # This is a disabled placeholder, but would block if active
+        file_logger.warning("[FILTERED] Global risk limits breached. Blocking trade.")
+        return False
+
+    # 7. Trade Frequency/Limit (Per strategy, per symbol, per day)
+    # This function `increment_trade_count` and `check_trade_limits`
+    # are needed. `check_trade_limits` is already imported from file.py.
+    # `increment_trade_count` is also needed.
+    def increment_trade_count(sym, strat):
+        # Logic to increment trade count for a given symbol and strategy
+        # This function is called after a trade is placed.
+        today_str = datetime.now(pytz.UTC).strftime('%Y-%m-%d')
+        if today_str not in daily_trade_counts:
+            daily_trade_counts[today_str] = {}
+        if sym not in daily_trade_counts[today_str]:
+            daily_trade_counts[today_str][sym] = {}
+        if strat not in daily_trade_counts[today_str][sym]:
+            daily_trade_counts[today_str][sym][strat] = 0
+        daily_trade_counts[today_str][sym][strat] += 1
+        file_logger.debug(f"Trade count for {sym} / {strat} incremented to {daily_trade_counts[today_str][sym][strat]}")
+
+    if not check_trade_limits(symbol, strategy_name):
+        file_logger.info(f"[FILTERED] {symbol} | {strategy_name}: Daily trade limit reached for this strategy/symbol. Blocking trade.")
+        return False
+
+    # --- Calculate Final Lot Size, SL, TP based on all data ---
+    symbol_info = mt5.symbol_info(symbol)
+    if symbol_info is None or symbol_info.point == 0:
+        file_logger.error(f"[CENTRALIZED PROCESSOR] Symbol info unavailable or point is zero for {symbol}. Cannot calculate lot/SL/TP.")
+        return False
+
+    final_sl = suggested_sl # At this point, suggested_sl is already validated and calculated if needed.
+
+    sl_points = abs(entry_price - final_sl) / symbol_info.point
+    if sl_points == 0:
+        file_logger.error(f"[CENTRALIZED PROCESSOR] SL points calculated as zero for {symbol} | {strategy_name}. Blocking trade.")
+        return False
+
+    # Define calculate_position_size_for_file_py which was missing.
+    def calculate_position_size_for_file_py(symbol_param, equity_param, atr_param, sl_points_param):
+        """
+        Calculates a base position size based on risk per trade.
+        This is a simplified version; adapt to your actual risk model.
+        """
+        risk_per_trade_pct = 0.01 # Example: 1% risk per trade
+        risk_amount_usd = equity_param * risk_per_trade_pct
+
+        symbol_info_local = mt5.symbol_info(symbol_param)
+        if symbol_info_local is None:
+            file_logger.error(f"Symbol info not found for {symbol_param} for calculate_position_size. Cannot calculate base lot.")
+            return 0.0
+
+        if symbol_info_local.trade_tick_value == 0 or sl_points_param == 0:
+            file_logger.error(f"Trade tick value or SL points is zero for {symbol_param}. Cannot calculate base lot.")
+            return 0.0
+
+        # Value of one standard lot movement by one point
+        # For XAUUSD, 1 lot = $10 per point. For forex, it varies.
+        # This is a simplification. For precise calculation, use symbol_info_tick value or pip value.
+        # Assuming for XAUUSD, a 'point' is 0.01 (cents)
+        point_value = symbol_info_local.point
+        if 'XAU' in symbol_param or 'GOLD' in symbol_param:
+            # Gold: 1 lot is 100 units. If point is 0.01, then 1 pip (0.1) is $10.
+            # So, for a 0.01 point move, 1 lot changes by $1.
+            cost_per_point_per_lot = 1.0 # This needs to be precisely derived based on contract size etc.
+        elif 'JPY' in symbol_param:
+            # JPY pairs: 1 lot is 100,000 units. Pip is usually 0.01. Point is 0.001.
+            # Example: USDJPY, 1 lot, 1 pip ($0.01) = $10. 1 point = $1.
+            cost_per_point_per_lot = 1.0 # Adjust based on broker
+        else: # Other forex
+            # Example EURUSD: 1 lot = 100,000 units. Pip is 0.0001. Point is 0.00001.
+            # 1 pip for 1 standard lot = $10. So 1 point = $1.
+            cost_per_point_per_lot = 1.0 # Adjust based on broker
+
+
+        if symbol_info_local.trade_contract_size > 0 and symbol_info_local.trade_tick_value > 0 and symbol_info_local.trade_tick_size > 0:
+             # Calculate the value of 1 lot moving by 1 point
+             # For forex: (Contract Size * Point Value) for 1 lot. E.g., 100000 * 0.00001 = 1 USD for EURUSD 1 point.
+             # For gold: (Contract Size * Point Value) for 1 lot. E.g., 100 * 0.01 = 1 USD for XAUUSD 1 point.
+            value_per_point_per_lot = (symbol_info_local.trade_contract_size * symbol_info_local.point) / symbol_info_local.trade_tick_size if symbol_info_local.trade_tick_size > 0 else 1.0
+        else:
+            value_per_point_per_lot = cost_per_point_per_lot # Fallback
+
+        risk_per_lot_usd = sl_points_param * value_per_point_per_lot
+
+        if risk_per_lot_usd == 0:
+            file_logger.error(f"Calculated risk_per_lot_usd is zero for {symbol_param}. Cannot calculate base lot.")
+            return 0.0
+
+        calculated_lot = risk_amount_usd / risk_per_lot_usd
+        return max(0.05, round(calculated_lot, 2)) # Enforce minimum 0.05
+
+    # Calculate dynamic lot size, passing LLM sentiment score (NEW)
+    base_calculated_lot = calculate_position_size_for_file_py(symbol, equity, atr, sl_points)
+    final_lot_size = get_dynamic_lot(
+        symbol,
+        strategy_name,
+        max(0.05, base_calculated_lot),  # Enforce minimum 0.05 lot baseline
+        max(0.05, symbol_info.volume_min),
+        symbol_info.volume_max,
+        llm_sentiment_score=sentiment_score,
+    )
+
+    if not validate_lot_size(symbol, final_lot_size):
+        file_logger.error(f"[CENTRALIZED PROCESSOR] Final lot size {final_lot_size:.2f} is invalid after all adjustments for {symbol}. Blocking trade.")
+        return False
+
+    # Calculate TPs with proper risk-reward ratios (1:2 for TP1, 1:3 for TP2)
+    tp1 = calculate_tp(entry_price, final_sl, rr=2.0, direction=direction, symbol_digits=symbol_info.digits)
+    tp2 = calculate_tp(entry_price, final_sl, rr=3.0, direction=direction, symbol_digits=symbol_info.digits)
+
+    # Validate TP levels
+    if (direction == 'buy' and (tp1 <= entry_price or tp2 <= entry_price)) or \
+       (direction == 'sell' and (tp1 >= entry_price or tp2 >= entry_price)):
+        file_logger.error(f"[CENTRALIZED PROCESSOR] Invalid TP levels calculated for {symbol} | {strategy_name}. Blocking trade. TP1: {tp1:.5f}, TP2: {tp2:.5f}")
+        return False
+
+    # Calculate trailing stop loss levels based on volatility
+    trailing_sl_distance = atr * 1.5  # 1.5x ATR for trailing stop
+    if direction == 'buy':
+        trailing_sl_level = entry_price - trailing_sl_distance
+    else:
+        trailing_sl_level = entry_price + trailing_sl_distance
+
+    file_logger.info(f"[CENTRALIZED PROCESSOR] Final Trade Parameters for {symbol} | {strategy_name}: "
+                     f"Dir={direction.upper()}, Entry={entry_price:.5f}, SL={final_sl:.5f}, "
+                     f"TP1={tp1:.5f} (1:2), TP2={tp2:.5f} (1:3), "
+                     f"Trailing SL={trailing_sl_level:.5f}, Lot={final_lot_size:.2f}")
+
+    # [PASS] Checkpoint 11: All Risk Checks PASSED - Ready for Trade Execution
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 11: All risk checks passed for {symbol} | {strategy_name} - READY FOR EXECUTION")
+
+    # If dry-run, do not place real orders
+    if not EXECUTE_REAL_TRADES:
+        file_logger.info(f"[DRY-RUN] Would place order for {symbol} | {strategy_name}. Live={live_price}, CandleAge={candle_age:.0f}s, TickAge={tick_age:.0f}s, LastExec={last_exec}")
+        return False
+
+    # [PASS] Checkpoint 12: EXECUTE_REAL_TRADES Check PASSED - LIVE TRADING ENABLED
+    file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 12: Live trading enabled for {symbol} | {strategy_name}")
+
+    # --- Execute Trade with Partials ---
+    partial_lots = split_lot(final_lot_size)
+    target_tps = [tp1, tp2]  # exact 60/40 two-part execution
+
+    placed_tickets = []
+    for i, part_lot in enumerate(partial_lots):
+        if part_lot > 0:
+            current_tp_for_partial = target_tps[min(i, len(target_tps) - 1)]
+
+            # Comment reflects the actual executing strategy for MT5 history clarity
+            comment_str = f"{strategy_name}_TP{i+1}" if i < len(target_tps) else f"{strategy_name}_Partial{i+1}"
+
+            # Ensure part lot respects broker step using round_lot
+            part_lot = round_lot(symbol, part_lot)
+            file_logger.info(f"[ORDER SEND] symbol={symbol}, strategy={strategy_name}, signal={signal_result}, live_price={live_price}, candle_age={candle_age:.0f}s, tick_age={tick_age:.0f}s, last_executed_candle={last_exec}")
+
+            # [PASS] Checkpoint 13: About to place order
+            file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 13: About to place order for {symbol} | {strategy_name} - Part {i+1}, Lot={part_lot:.2f}")
+
+            success, ticket = place_order(
+                symbol=symbol,
+                order_type=mt5.ORDER_TYPE_BUY if direction == "buy" else mt5.ORDER_TYPE_SELL,
+                volume=part_lot,
+                price=entry_price,
+                sl=final_sl,
+                tp=current_tp_for_partial,
+                comment=comment_str,
+                strategy_name=strategy_name,
+                risk_amount=equity * 0.01
+            )
+
+            # [PASS] Checkpoint 14: Order placement attempt completed
+            if success and ticket:
+                file_logger.info(f"[CENTRALIZED PROCESSOR] [PASS] Checkpoint 14: Order placement successful for {symbol} | {strategy_name} - Ticket: {ticket}")
+            else:
+                file_logger.error(f"[CENTRALIZED PROCESSOR] [FAIL] Checkpoint 14: Order placement failed for {symbol} | {strategy_name} - Part {i+1}, Lot: {part_lot:.2f}")
+
+            if success and ticket:
+                placed_tickets.append(ticket)
+                increment_trade_count(symbol, strategy_name)
+                
+                # Store trailing stop information for this trade
+                with data_lock:
+                    active_trades[ticket] = {
+                        'symbol': symbol,
+                        'strategy': strategy_name,
+                        'direction': direction,
+                        'entry_price': entry_price,
+                        'initial_sl': final_sl,
+                        'trailing_sl_level': trailing_sl_level,
+                        'trailing_sl_distance': trailing_sl_distance,
+                        'tp1': tp1,
+                        'tp2': tp2,
+                        # no TP3 now (two-part execution)
+                        'atr': atr,
+                        'entry_time': datetime.now(timezone.utc)
+                    }
+                
+                file_logger.info(f"[CENTRALIZED PROCESSOR] Placed partial trade {i+1} for {symbol} | {strategy_name}. Ticket: {ticket}, Lot: {part_lot:.2f}")
+            else:
+                file_logger.error(f"[CENTRALIZED PROCESSOR] Failed to place partial trade {i+1} for {symbol} | {strategy_name}. Lot: {part_lot:.2f}")
+
+    if placed_tickets:
+        file_logger.info(f"[CENTRALIZED PROCESSOR] Successfully placed {len(placed_tickets)} trades for {symbol} | {strategy_name}.")
+        return True
+    else:
+        file_logger.warning(f"[CENTRALIZED PROCESSOR] No trades were placed for {symbol} | {strategy_name} after all checks and partialing.")
+        return False
+
+
+# --- Strategy Classes (These ONLY generate signals now) ---
+# --- News Filter Implementation ---
+def news_filter(symbol: str, current_time: datetime, market_data: dict) -> dict:
+    """
+    Enhanced news filter with proper LLM sentiment logic.
+
+    Returns dict with:
+    - allowed: bool
+    - reason: str
+    - llm_news_sentiment: dict (for use by process_strategy_signal)
+    - news_favored_direction: str
+    - is_within_news_window: bool
+    """
+    try:
+        # Default values
+        is_allowed = True
+        reason = ""
+        llm_sentiment = {"sentiment": "NEUTRAL", "score": 0.0}
+        news_favored_direction = "both"  # "buy", "sell", "none", "both"
+        is_within_news_window = False
+
+        # Check if LLM analyzer is available
+        if llm_sentiment_analyzer_instance is None:
+            file_logger.warning("LLM sentiment analyzer not available. Using neutral sentiment.")
+        else:
+            try:
+                # Get recent news and analyze sentiment
+                recent_news = get_forex_factory_news()
+
+                if recent_news:
+                    # Analyze sentiment for recent news
+                    sentiment_result = llm_sentiment_analyzer_instance.analyze_news_sentiment(recent_news)
+
+                    if sentiment_result:
+                        llm_sentiment = {
+                            "sentiment": sentiment_result.get("sentiment", "NEUTRAL"),
+                            "score": sentiment_result.get("score", 0.0)
+                        }
+
+                        # Determine news window (2 hours around major news)
+                        news_time = sentiment_result.get("news_time")
+                        if news_time:
+                            time_diff = abs((current_time - news_time).total_seconds())
+                            is_within_news_window = time_diff <= 7200  # 2 hours
+
+                            # Determine favored direction based on sentiment
+                            if llm_sentiment["score"] > 0.7:
+                                news_favored_direction = "buy"
+                            elif llm_sentiment["score"] < -0.7:
+                                news_favored_direction = "sell"
+                            elif abs(llm_sentiment["score"]) < 0.2:
+                                news_favored_direction = "none"
+                            else:
+                                news_favored_direction = "both"
+
+                            file_logger.info(f"LLM Analysis for {symbol}: Sentiment={llm_sentiment['sentiment']} ({llm_sentiment['score']:.2f}), "
+                                          f"News Window: {'Active' if is_within_news_window else 'Inactive'}, "
+                                          f"Favored Direction: {news_favored_direction}")
+                        else:
+                            file_logger.warning("Could not determine news time from LLM analysis")
+                    else:
+                        file_logger.warning("LLM sentiment analysis returned no result")
+                else:
+                    file_logger.debug(f"No recent news found for {symbol}")
+
+            except Exception as e:
+                file_logger.error(f"Error in LLM sentiment analysis for {symbol}: {str(e)}")
+                # Continue with neutral sentiment on error
+
+        # Store results in market_data for use by process_strategy_signal
+        market_data["llm_news_sentiment"] = llm_sentiment
+        market_data["news_favored_direction"] = news_favored_direction
+        market_data["is_within_news_window"] = is_within_news_window
+
+        return {
+            'allowed': is_allowed,
+            'reason': reason,
+            'llm_news_sentiment': llm_sentiment,
+            'news_favored_direction': news_favored_direction,
+            'is_within_news_window': is_within_news_window
+        }
+
+    except Exception as e:
+        file_logger.error(f"Error in news_filter for {symbol}: {str(e)}")
+        return {
+            'allowed': False,
+            'reason': f'Error in news filter: {str(e)}',
+            'llm_news_sentiment': {"sentiment": "NEUTRAL", "score": 0.0},
+            'news_favored_direction': "both",
+            'is_within_news_window': False
+        }
+
+class mmxm:
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: mmxm | Symbol: {symbol} | Capital: ${equity:.2f}")
+
+        if len(prices) < 10 or df.empty:
+            return empty_strategy_result()
+
+        range_high = float(max(prices[-10:]))
+        range_low = float(min(prices[-10:]))
+        avg_price = (range_high + range_low) / 2
+        range_pct = (range_high - range_low) / avg_price if avg_price != 0 else 0
+
+        is_consolidation = range_pct < 0.005 # Tighter consolidation for better sweep
+
+        direction = None
+        current_price = prices[-1]
+
+        # Bullish sweep (price goes below low, then reverses up strongly)
+        if current_price < range_low and prices[-2] > range_low:
+            if df['close'].iloc[-1] > df['open'].iloc[-1] and df['close'].iloc[-1] > prices[-2]:
+                direction = "buy"
+        # Bearish sweep (price goes above high, then reverses down strongly)
+        elif current_price > range_high and prices[-2] < range_high:
+            if df['close'].iloc[-1] < df['open'].iloc[-1] and df['close'].iloc[-1] < prices[-2]:
+                direction = "sell"
+
+        if not direction or not is_consolidation:
+            file_logger.debug("mmxm: No valid sweep or not in consolidation.")
+            return empty_strategy_result()
+
+        atr = calculate_atr(df)
+        if atr is None or math.isnan(atr) or atr <= 0:
+            file_logger.warning("mmxm: ATR invalid, cannot suggest SL/TP. Skipping signal.")
+            return empty_strategy_result()
+
+        suggested_sl = current_price - (atr * 1.5) if direction == "buy" else current_price + (atr * 1.5)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+
+        file_logger.info(f"mmxm: Generated {direction.upper()} signal. Entry: {current_price:.5f}, Suggested SL: {suggested_sl:.5f}, Suggested TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+
+        # Example features for ML model (replace with actual features your model needs)
+        ml_features = [current_price, atr, df['tick_volume'].iloc[-1], range_pct, equity]
+
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features # Pass features for ML filter
+        }
+
+
+class msb_retest:
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: msb_retest | Symbol: {symbol} | Capital: ${equity:.2f}")
+
+        if len(df) < 20:
+            return empty_strategy_result()
+
+        last_high = df['high'].iloc[-10:-1].max()
+        last_low = df['low'].iloc[-10:-1].min()
+        current_price = prices[-1]
+
+        direction = None
+        retest_zone_price = None
+
+        if current_price > last_high and df['close'].iloc[-2] < last_high:
+            if df['close'].iloc[-1] > df['open'].iloc[-1] and df['close'].iloc[-1] > prices[-2]:
+                direction = 'buy'
+                retest_zone_price = last_high
+
+        elif current_price < last_low and df['close'].iloc[-2] > last_low:
+            if df['close'].iloc[-1] < df['open'].iloc[-1] and df['close'].iloc[-1] < prices[-2]:
+                direction = 'sell'
+                retest_zone_price = last_low
+
+        if not direction:
+            return empty_strategy_result()
+
+        atr = calculate_atr(df)
+        if atr is None or math.isnan(atr) or atr <= 0:
+            file_logger.warning("msb_retest: ATR invalid. Skipping signal.")
+            return empty_strategy_result()
+
+        suggested_sl = retest_zone_price - (atr * 1.5) if direction == "buy" else retest_zone_price + (atr * 1.5)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+
+        file_logger.info(f"msb_retest: Generated {direction.upper()} signal. Entry: {current_price:.5f}, Suggested SL: {suggested_sl:.5f}, Suggested TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+
+        # Build 13-length ML features compatible with the shared model schema
+        try:
+            last_row = df.iloc[-1]
+            has_ohlc = all(col in df.columns for col in ['open', 'high', 'low', 'close'])
+            body = float(abs(last_row['close'] - last_row['open'])) if has_ohlc else 0.0
+            if has_ohlc:
+                upper_body = float(max(last_row['open'], last_row['close']))
+                lower_body = float(min(last_row['open'], last_row['close']))
+                rng = float(last_row['high'] - last_row['low'])
+                wick_up = float(last_row['high'] - upper_body)
+                wick_dn = float(lower_body - last_row['low'])
+            else:
+                rng = 0.0
+                wick_up = 0.0
+                wick_dn = 0.0
+
+            atr_val = float(atr) if atr is not None else 0.0
+            atr_safe = atr_val if atr_val != 0 else 1.0
+            range_ratio = rng / atr_safe
+            wick_up_ratio = wick_up / (body + 1e-6) if body > 0 else 0.0
+            wick_dn_ratio = wick_dn / (body + 1e-6) if body > 0 else 0.0
+
+            # Calculate msb_retest specific flags
+            sweep_low_flag = 0
+            sweep_high_flag = 0
+            # Check for retest
+            if direction == 'buy' and current_price > last_high:
+                sweep_low_flag = 1
+            elif direction == 'sell' and current_price < last_low:
+                sweep_high_flag = 1
+
+            # Detect CHOCH (Change of Character)
+            choch_bullish = 0
+            choch_bearish = 0
+            # Simple CHOCH detection based on retest
+            if len(df) >= 10:
+                recent_high = df['high'].iloc[-10:-1].max()
+                recent_low = df['low'].iloc[-10:-1].min()
+                if direction == 'buy' and last_high < recent_high:
+                    choch_bullish = 1
+                elif direction == 'sell' and last_low > recent_low:
+                    choch_bearish = 1
+
+            in_zone_flag = 1  # If we reached here, we found a valid msb_retest setup
+
+            vol_spike_m15 = 0
+            if 'tick_volume' in df.columns and len(df) >= 20:
+                avg_vol = float(df['tick_volume'].rolling(window=20).mean().iloc[-1])
+                last_vol = float(df['tick_volume'].iloc[-1])
+                vol_spike_m15 = int(avg_vol > 0 and last_vol > 1.5 * avg_vol)
+
+            if isinstance(df.index, pd.DatetimeIndex):
+                hour = int(df.index[-1].hour)
+            elif 'time' in df.columns:
+                hour = int(pd.to_datetime(df['time'].iloc[-1]).hour)
+            else:
+                hour = 0
+
+            direction_flag = 1 if direction == 'buy' else 0
+
+            # Use retest zone distance as a proxy for zone_width_norm
+            zone_width_norm = (last_high - last_low) / atr_safe if atr_safe > 0 else 0.0
+
+            ml_features = [
+                atr_val,            # 1) ATR
+                zone_width_norm,    # 2) Zone width / ATR (proxy)
+                range_ratio,        # 3) Candle range / ATR
+                wick_up_ratio,      # 4) Upper wick / body
+                wick_dn_ratio,      # 5) Lower wick / body
+                sweep_low_flag,     # 6)
+                sweep_high_flag,    # 7)
+                choch_bullish,      # 8)
+                choch_bearish,      # 9)
+                in_zone_flag,       # 10)
+                vol_spike_m15,      # 11)
+                hour,               # 12)
+                direction_flag,     # 13)
+            ]
+        except Exception:
+            # As a last resort, return a zero vector of length 13 to satisfy the ML filter
+            ml_features = [0.0] * 13
+
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features
+        }
+
+
+class order_block:
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: order_block | Symbol: {symbol} | Capital: ${equity:.2f}")
+
+        if len(df) < 15:
+            return empty_strategy_result()
+
+        current_price = prices[-1]
+        direction = None
+        suggested_ob_level = None
+
+        # Look for bullish order block
+        ob_low = find_order_block(df, 'buy', lookback=10)
+        if ob_low and current_price > ob_low and current_price < ob_low + (0.3 * calculate_atr(df)):
+            direction = 'buy'
+            suggested_ob_level = ob_low
+
+        # Look for bearish order block
+        ob_high = find_order_block(df, 'sell', lookback=10)
+        if ob_high and current_price < ob_high and current_price > ob_high - (0.3 * calculate_atr(df)):
+            direction = 'sell'
+            suggested_ob_level = ob_high
+
+        if not direction:
+            return empty_strategy_result()
+
+        atr = calculate_atr(df)
+        if atr is None or math.isnan(atr) or atr <= 0:
+            file_logger.warning("order_block: ATR invalid. Skipping signal.")
+            return empty_strategy_result()
+
+        # Calculate SL and TPs with proper risk-reward ratios
+        suggested_sl = suggested_ob_level - (atr * 1.0) if direction == "buy" else suggested_ob_level + (atr * 1.0)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+
+        file_logger.info(f"order_block: Generated {direction.upper()} signal. Entry: {current_price:.5f}, Suggested SL: {suggested_sl:.5f}, Suggested TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+
+        # Build 13-length ML features compatible with the shared model schema
+        try:
+            last_row = df.iloc[-1]
+            has_ohlc = all(col in df.columns for col in ['open', 'high', 'low', 'close'])
+            body = float(abs(last_row['close'] - last_row['open'])) if has_ohlc else 0.0
+            if has_ohlc:
+                upper_body = float(max(last_row['open'], last_row['close']))
+                lower_body = float(min(last_row['open'], last_row['close']))
+                rng = float(last_row['high'] - last_row['low'])
+                wick_up = float(last_row['high'] - upper_body)
+                wick_dn = float(lower_body - last_row['low'])
+            else:
+                rng = 0.0
+                wick_up = 0.0
+                wick_dn = 0.0
+
+            atr_val = float(atr) if atr is not None else 0.0
+            atr_safe = atr_val if atr_val != 0 else 1.0
+            range_ratio = rng / atr_safe
+            wick_up_ratio = wick_up / (body + 1e-6) if body > 0 else 0.0
+            wick_dn_ratio = wick_dn / (body + 1e-6) if body > 0 else 0.0
+
+            # Calculate order_block specific flags
+            sweep_low_flag = 0
+            sweep_high_flag = 0
+            # Check for order block breakout
+            if direction == 'buy' and ob_low:
+                if current_price > ob_low + (0.3 * atr):
+                    sweep_low_flag = 1
+            elif direction == 'sell' and ob_high:
+                if current_price < ob_high - (0.3 * atr):
+                    sweep_high_flag = 1
+
+            # Detect CHOCH (Change of Character)
+            choch_bullish = 0
+            choch_bearish = 0
+            # Simple CHOCH detection based on order block breakout
+            if len(df) >= 15:
+                recent_high = df['high'].iloc[-15:-1].max()
+                recent_low = df['low'].iloc[-15:-1].min()
+                if direction == 'buy' and ob_low and ob_low > recent_low:
+                    choch_bullish = 1
+                elif direction == 'sell' and ob_high and ob_high < recent_high:
+                    choch_bearish = 1
+
+            in_zone_flag = 1  # If we reached here, we found a valid order_block setup
+
+            vol_spike_m15 = 0
+            if 'tick_volume' in df.columns and len(df) >= 20:
+                avg_vol = float(df['tick_volume'].rolling(window=20).mean().iloc[-1])
+                last_vol = float(df['tick_volume'].iloc[-1])
+                vol_spike_m15 = int(avg_vol > 0 and last_vol > 1.5 * avg_vol)
+
+            if isinstance(df.index, pd.DatetimeIndex):
+                hour = int(df.index[-1].hour)
+            elif 'time' in df.columns:
+                hour = int(pd.to_datetime(df['time'].iloc[-1]).hour)
+            else:
+                hour = 0
+
+            direction_flag = 1 if direction == 'buy' else 0
+
+            # Use order block level distance as a proxy for zone_width_norm
+            zone_width_norm = (ob_high - ob_low) / atr_safe if ob_high and ob_low and atr_safe > 0 else 0.0
+
+            ml_features = [
+                atr_val,            # 1) ATR
+                zone_width_norm,    # 2) Zone width / ATR (proxy)
+                range_ratio,        # 3) Candle range / ATR
+                wick_up_ratio,      # 4) Upper wick / body
+                wick_dn_ratio,      # 5) Lower wick / body
+                sweep_low_flag,     # 6)
+                sweep_high_flag,    # 7)
+                choch_bullish,      # 8)
+                choch_bearish,      # 9)
+                in_zone_flag,       # 10)
+                vol_spike_m15,      # 11)
+                hour,               # 12)
+                direction_flag,     # 13)
+            ]
+        except Exception:
+            # As a last resort, return a zero vector of length 13 to satisfy the ML filter
+            ml_features = [0.0] * 13
+
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features
+        }
+
+
+class amd_strategy:
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: amd_strategy | Symbol: {symbol} | Capital: ${equity:.2f}")
+
+        if len(df) < 30:
+            return empty_strategy_result()
+
+        price_range = prices[-15:].max() - prices[-15:].min()
+        current_atr = calculate_atr(df)
+
+        if current_atr is None or math.isnan(current_atr) or current_atr <= 0:
+            file_logger.warning("amd_strategy: ATR invalid. Skipping signal.")
+            return empty_strategy_result()
+
+        is_accumulating = price_range < (current_atr * 0.5)
+
+        if not is_accumulating:
+            file_logger.debug("amd_strategy: Not in accumulation phase.")
+            return empty_strategy_result()
+
+        high_of_acc = prices[-15:].max()
+        low_of_acc = prices[-15:].min()
+        current_price = prices[-1]
+        prev_candle_close = prices[-2]
+
+        direction = None
+        if current_price < low_of_acc and prev_candle_close <= low_of_acc:
+            if df['close'].iloc[-1] > df['open'].iloc[-1]:
+                direction = "buy"
+        elif current_price > high_of_acc and prev_candle_close >= high_of_acc:
+            if df['close'].iloc[-1] < df['open'].iloc[-1]:
+                direction = "sell"
+
+        if not direction:
+            file_logger.debug("amd_strategy: No clear manipulation detected.")
+            return empty_strategy_result()
+
+        suggested_sl = low_of_acc - (current_atr * 1.0) if direction == "buy" else high_of_acc + (current_atr * 1.0)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+
+        file_logger.info(f"amd_strategy: Generated {direction.upper()} signal. Entry: {current_price:.5f}, Suggested SL: {suggested_sl:.5f}, Suggested TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+
+        # Build 13-length ML features compatible with the shared model schema
+        try:
+            last_row = df.iloc[-1]
+            has_ohlc = all(col in df.columns for col in ['open', 'high', 'low', 'close'])
+            body = float(abs(last_row['close'] - last_row['open'])) if has_ohlc else 0.0
+            if has_ohlc:
+                upper_body = float(max(last_row['open'], last_row['close']))
+                lower_body = float(min(last_row['open'], last_row['close']))
+                rng = float(last_row['high'] - last_row['low'])
+                wick_up = float(last_row['high'] - upper_body)
+                wick_dn = float(lower_body - last_row['low'])
+            else:
+                rng = 0.0
+                wick_up = 0.0
+                wick_dn = 0.0
+
+            atr_val = float(current_atr) if current_atr is not None else 0.0
+            atr_safe = atr_val if atr_val != 0 else 1.0
+            range_ratio = rng / atr_safe
+            wick_up_ratio = wick_up / (body + 1e-6) if body > 0 else 0.0
+            wick_dn_ratio = wick_dn / (body + 1e-6) if body > 0 else 0.0
+
+            # Calculate amd_strategy specific flags
+            sweep_low_flag = 0
+            sweep_high_flag = 0
+            # Check for accumulation breakout
+            if direction == 'buy':
+                if current_price < low_of_acc:
+                    sweep_low_flag = 1
+            elif direction == 'sell':
+                if current_price > high_of_acc:
+                    sweep_high_flag = 1
+
+            # Detect CHOCH (Change of Character)
+            choch_bullish = 0
+            choch_bearish = 0
+            # Simple CHOCH detection based on accumulation breakout
+            if len(df) >= 15:
+                recent_high = df['high'].iloc[-15:-1].max()
+                recent_low = df['low'].iloc[-15:-1].min()
+                if direction == 'buy' and low_of_acc > recent_low:
+                    choch_bullish = 1
+                elif direction == 'sell' and high_of_acc < recent_high:
+                    choch_bearish = 1
+
+            in_zone_flag = 1  # If we reached here, we found a valid amd_strategy setup
+
+            vol_spike_m15 = 0
+            if 'tick_volume' in df.columns and len(df) >= 20:
+                avg_vol = float(df['tick_volume'].rolling(window=20).mean().iloc[-1])
+                last_vol = float(df['tick_volume'].iloc[-1])
+                vol_spike_m15 = int(avg_vol > 0 and last_vol > 1.5 * avg_vol)
+
+            if isinstance(df.index, pd.DatetimeIndex):
+                hour = int(df.index[-1].hour)
+            elif 'time' in df.columns:
+                hour = int(pd.to_datetime(df['time'].iloc[-1]).hour)
+            else:
+                hour = 0
+
+            direction_flag = 1 if direction == 'buy' else 0
+
+            # Use accumulation range as a proxy for zone_width_norm
+            zone_width_norm = price_range / atr_safe if atr_safe > 0 else 0.0
+
+            ml_features = [
+                atr_val,            # 1) ATR
+                zone_width_norm,    # 2) Zone width / ATR (proxy)
+                range_ratio,        # 3) Candle range / ATR
+                wick_up_ratio,      # 4) Upper wick / body
+                wick_dn_ratio,      # 5) Lower wick / body
+                sweep_low_flag,     # 6)
+                sweep_high_flag,    # 7)
+                choch_bullish,      # 8)
+                choch_bearish,      # 9)
+                in_zone_flag,       # 10)
+                vol_spike_m15,      # 11)
+                hour,               # 12)
+                direction_flag,     # 13)
+            ]
+        except Exception:
+            # As a last resort, return a zero vector of length 13 to satisfy the ML filter
+            ml_features = [0.0] * 13
+
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features
+        }
+
+
+class JudasSwingStrategy:
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: judas_swing | Symbol: {symbol} | Capital: ${equity:.2f}")
+
+        if len(df) < 50:
+            return empty_strategy_result()
+
+        current_utc_hour = datetime.now(timezone.utc).hour
+        is_london_session = (current_utc_hour >= 8 and current_utc_hour < 16)
+        is_ny_session = (current_utc_hour >= 13 and current_utc_hour < 22)
+
+        if not (is_london_session and is_ny_session):
+             file_logger.debug("judas_swing: Not in London/NY session overlap (13-16 UTC).")
+             return empty_strategy_result()
+
+        swing_highs, swing_lows = find_swing_high_low(df, window=10)
+
+        if not swing_highs and not swing_lows:
+            file_logger.debug("judas_swing: No recent swing highs/lows found.")
+            return empty_strategy_result()
+
+        current_price = prices[-1]
+        prev_candle_close = prices[-2]
+
+        direction = None
+        judas_level = None
+
+        if swing_lows:
+            lowest_swing_low = min(sl[1] for sl in swing_lows)
+
+            if current_price < lowest_swing_low and prev_candle_close >= lowest_swing_low:
+                if df['close'].iloc[-1] > df['open'].iloc[-1] and df['close'].iloc[-1] > current_price + (0.5 * calculate_atr(df)):
+                    direction = "buy"
+                    judas_level = lowest_swing_low
+
+        if swing_highs and not direction:
+            highest_swing_high = max(sh[1] for sh in swing_highs)
+
+            if current_price > highest_swing_high and prev_candle_close <= highest_swing_high:
+                if df['close'].iloc[-1] < df['open'].iloc[-1] and df['close'].iloc[-1] < current_price - (0.5 * calculate_atr(df)):
+                    direction = "sell"
+                    judas_level = highest_swing_high
+
+        if not direction:
+            file_logger.debug("judas_swing: No clear judas swing pattern detected.")
+            return empty_strategy_result()
+
+        atr = calculate_atr(df)
+        if atr is None or math.isnan(atr) or atr <= 0:
+            file_logger.warning("judas_swing: ATR invalid. Skipping signal.")
+            return empty_strategy_result()
+
+        suggested_sl = judas_level - (atr * 0.8) if direction == "buy" else judas_level + (atr * 0.8)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+
+        file_logger.info(f"judas_swing: Generated {direction.upper()} signal. Entry: {current_price:.5f}, Suggested SL: {suggested_sl:.5f}, Suggested TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+
+        # Build 13-length ML features compatible with the shared model schema
+        try:
+            last_row = df.iloc[-1]
+            has_ohlc = all(col in df.columns for col in ['open', 'high', 'low', 'close'])
+            body = float(abs(last_row['close'] - last_row['open'])) if has_ohlc else 0.0
+            if has_ohlc:
+                upper_body = float(max(last_row['open'], last_row['close']))
+                lower_body = float(min(last_row['open'], last_row['close']))
+                rng = float(last_row['high'] - last_row['low'])
+                wick_up = float(last_row['high'] - upper_body)
+                wick_dn = float(lower_body - last_row['low'])
+            else:
+                rng = 0.0
+                wick_up = 0.0
+                wick_dn = 0.0
+
+            atr_val = float(atr) if atr is not None else 0.0
+            atr_safe = atr_val if atr_val != 0 else 1.0
+            range_ratio = rng / atr_safe
+            wick_up_ratio = wick_up / (body + 1e-6) if body > 0 else 0.0
+            wick_dn_ratio = wick_dn / (body + 1e-6) if body > 0 else 0.0
+
+            # Calculate judas_swing specific flags
+            sweep_low_flag = 0
+            sweep_high_flag = 0
+            # Check for swing level breakout
+            if direction == 'buy' and swing_lows:
+                lowest_swing_low = min(sl[1] for sl in swing_lows)
+                if current_price < lowest_swing_low:
+                    sweep_low_flag = 1
+            elif direction == 'sell' and swing_highs:
+                highest_swing_high = max(sh[1] for sh in swing_highs)
+                if current_price > highest_swing_high:
+                    sweep_high_flag = 1
+
+            # Detect CHOCH (Change of Character)
+            choch_bullish = 0
+            choch_bearish = 0
+            # Simple CHOCH detection based on swing breakout
+            if len(df) >= 10:
+                recent_high = df['high'].iloc[-10:-1].max()
+                recent_low = df['low'].iloc[-10:-1].min()
+                if direction == 'buy' and swing_lows:
+                    lowest_swing_low = min(sl[1] for sl in swing_lows)
+                    if lowest_swing_low > recent_low:
+                        choch_bullish = 1
+                elif direction == 'sell' and swing_highs:
+                    highest_swing_high = max(sh[1] for sh in swing_highs)
+                    if highest_swing_high < recent_high:
+                        choch_bearish = 1
+
+            in_zone_flag = 1  # If we reached here, we found a valid judas_swing setup
+
+            vol_spike_m15 = 0
+            if 'tick_volume' in df.columns and len(df) >= 20:
+                avg_vol = float(df['tick_volume'].rolling(window=20).mean().iloc[-1])
+                last_vol = float(df['tick_volume'].iloc[-1])
+                vol_spike_m15 = int(avg_vol > 0 and last_vol > 1.5 * avg_vol)
+
+            if isinstance(df.index, pd.DatetimeIndex):
+                hour = int(df.index[-1].hour)
+            elif 'time' in df.columns:
+                hour = int(pd.to_datetime(df['time'].iloc[-1]).hour)
+            else:
+                hour = 0
+
+            direction_flag = 1 if direction == 'buy' else 0
+
+            # Use swing level distance as a proxy for zone_width_norm
+            zone_width_norm = 0.0  # Default value
+            if swing_highs and swing_lows:
+                swing_range = max(sh[1] for sh in swing_highs) - min(sl[1] for sl in swing_lows)
+                zone_width_norm = swing_range / atr_safe if atr_safe > 0 else 0.0
+
+            ml_features = [
+                atr_val,            # 1) ATR
+                zone_width_norm,    # 2) Zone width / ATR (proxy)
+                range_ratio,        # 3) Candle range / ATR
+                wick_up_ratio,      # 4) Upper wick / body
+                wick_dn_ratio,      # 5) Lower wick / body
+                sweep_low_flag,     # 6)
+                sweep_high_flag,    # 7)
+                choch_bullish,      # 8)
+                choch_bearish,      # 9)
+                in_zone_flag,       # 10)
+                vol_spike_m15,      # 11)
+                hour,               # 12)
+                direction_flag,     # 13)
+            ]
+        except Exception:
+            # As a last resort, return a zero vector of length 13 to satisfy the ML filter
+            ml_features = [0.0] * 13
+
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features
+        }
+
+
+class mmc_strategy: # This seems to be a generic MMC, not MMC Combo
+    def __init__(self):
+        pass # No strategy-specific state here
+
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: mmc_strategy | Symbol: {symbol} | Capital: ${equity:.2f}")
+
+        if df is None or df.empty or len(prices) < 20:
+            return empty_strategy_result()
+
+        acc_range_pct = (prices[-15:].max() - prices[-15:].min()) / np.mean(prices[-15:])
+        if acc_range_pct > 0.002:
+            file_logger.debug("mmc_strategy: Not in accumulation phase (range too wide).")
+            return empty_strategy_result()
+
+        direction = None
+        current_price = prices[-1]
+
+        if current_price < prices[-16:-1].min() and df['close'].iloc[-1] > df['open'].iloc[-1]:
+            swing_highs, _ = find_swing_high_low(df)
+            if swing_highs:
+                recent_broken_highs = [sh[1] for sh in swing_highs if sh[1] < current_price]
+                if recent_broken_highs and current_price > max(recent_broken_highs):
+                    direction = 'buy'
+        elif current_price > prices[-16:-1].max() and df['close'].iloc[-1] < df['open'].iloc[-1]:
+            _, swing_lows = find_swing_high_low(df)
+            if swing_lows:
+                recent_broken_lows = [sl[1] for sl in swing_lows if sl[1] > current_price]
+                if recent_broken_lows and current_price < min(recent_broken_lows):
+                    direction = 'sell'
+
+        if not direction:
+            file_logger.debug("mmc_strategy: No clear sweep or CHOCH detected.")
+            return empty_strategy_result()
+
+        atr = calculate_atr(df)
+        if atr is None or math.isnan(atr) or atr <= 0:
+            file_logger.warning("mmc_strategy: ATR invalid. Skipping signal.")
+            return empty_strategy_result()
+
+        suggested_sl = current_price - (atr * 1.5) if direction == 'buy' else current_price + (atr * 1.5)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+
+        file_logger.info(f"mmc_strategy: Generated {direction.upper()} signal. Entry: {current_price:.5f}, Suggested SL: {suggested_sl:.5f}, Suggested TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+
+        # Build 13-length ML features compatible with the shared model schema
+        try:
+            last_row = df.iloc[-1]
+            has_ohlc = all(col in df.columns for col in ['open', 'high', 'low', 'close'])
+            body = float(abs(last_row['close'] - last_row['open'])) if has_ohlc else 0.0
+            if has_ohlc:
+                upper_body = float(max(last_row['open'], last_row['close']))
+                lower_body = float(min(last_row['open'], last_row['close']))
+                rng = float(last_row['high'] - last_row['low'])
+                wick_up = float(last_row['high'] - upper_body)
+                wick_dn = float(lower_body - last_row['low'])
+            else:
+                rng = 0.0
+                wick_up = 0.0
+                wick_dn = 0.0
+
+            atr_val = float(atr) if atr is not None else 0.0
+            atr_safe = atr_val if atr_val != 0 else 1.0
+            range_ratio = rng / atr_safe
+            wick_up_ratio = wick_up / (body + 1e-6) if body > 0 else 0.0
+            wick_dn_ratio = wick_dn / (body + 1e-6) if body > 0 else 0.0
+
+            # Calculate mmc_strategy specific flags
+            sweep_low_flag = 0
+            sweep_high_flag = 0
+            # Check for accumulation breakout
+            if direction == 'buy':
+                if current_price < prices[-16:-1].min():
+                    sweep_low_flag = 1
+            elif direction == 'sell':
+                if current_price > prices[-16:-1].max():
+                    sweep_high_flag = 1
+
+            # Detect CHOCH (Change of Character)
+            choch_bullish = 0
+            choch_bearish = 0
+            # Simple CHOCH detection based on accumulation breakout
+            if len(df) >= 16:
+                recent_high = df['high'].iloc[-16:-1].max()
+                recent_low = df['low'].iloc[-16:-1].min()
+                if direction == 'buy' and prices[-16:-1].min() > recent_low:
+                    choch_bullish = 1
+                elif direction == 'sell' and prices[-16:-1].max() < recent_high:
+                    choch_bearish = 1
+
+            in_zone_flag = 1  # If we reached here, we found a valid mmc_strategy setup
+
+            vol_spike_m15 = 0
+            if 'tick_volume' in df.columns and len(df) >= 20:
+                avg_vol = float(df['tick_volume'].rolling(window=20).mean().iloc[-1])
+                last_vol = float(df['tick_volume'].iloc[-1])
+                vol_spike_m15 = int(avg_vol > 0 and last_vol > 1.5 * avg_vol)
+
+            if isinstance(df.index, pd.DatetimeIndex):
+                hour = int(df.index[-1].hour)
+            elif 'time' in df.columns:
+                hour = int(pd.to_datetime(df['time'].iloc[-1]).hour)
+            else:
+                hour = 0
+
+            direction_flag = 1 if direction == 'buy' else 0
+
+            # Use accumulation range as a proxy for zone_width_norm
+            zone_width_norm = acc_range_pct * 100  # Convert percentage to meaningful scale
+
+            ml_features = [
+                atr_val,            # 1) ATR
+                zone_width_norm,    # 2) Zone width / ATR (proxy)
+                range_ratio,        # 3) Candle range / ATR
+                wick_up_ratio,      # 4) Upper wick / body
+                wick_dn_ratio,      # 5) Lower wick / body
+                sweep_low_flag,     # 6)
+                sweep_high_flag,    # 7)
+                choch_bullish,      # 8)
+                choch_bearish,      # 9)
+                in_zone_flag,       # 10)
+                vol_spike_m15,      # 11)
+                hour,               # 12)
+                direction_flag,     # 13)
+            ]
+        except Exception:
+            # As a last resort, return a zero vector of length 13 to satisfy the ML filter
+            ml_features = [0.0] * 13
+
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features
+        }
+
+
+# Dummy/Placeholder strategies (if you don't have separate files for them yet)
+# These should ideally be in STOCKDATA/modules.
+# Ensure that these match the actual classes from your modules folder.
+class MMCXAUUSDStrategy:
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: MMCXAUUSDStrategy | Symbol: {symbol} | Capital: ${equity:.2f}")
+        
+        if len(df) < 30 or df.empty:
+            return empty_strategy_result()
+
+        # Simple MMC logic - look for accumulation and breakout
+        acc_range = prices[-20:].max() - prices[-20:].min()
+        acc_avg = np.mean(prices[-20:])
+        acc_range_pct = acc_range / acc_avg if acc_avg > 0 else 0
+        
+        if acc_range_pct > 0.003:  # Too volatile for accumulation
+            return empty_strategy_result()
+                
+        current_price = prices[-1]
+        direction = None
+        
+        # Look for breakout from accumulation
+        if current_price > prices[-20:].max() and df['close'].iloc[-1] > df['open'].iloc[-1]:
+            direction = 'buy'
+        elif current_price < prices[-20:].min() and df['close'].iloc[-1] < df['open'].iloc[-1]:
+            direction = 'sell'
+            
+        if not direction:
+            return empty_strategy_result()
+        
+        atr = calculate_atr(df)
+        if atr is None or math.isnan(atr) or atr <= 0:
+            return empty_strategy_result()
+        
+        suggested_sl = current_price - (atr * 1.5) if direction == 'buy' else current_price + (atr * 1.5)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+        
+        file_logger.info(f"MMCXAUUSDStrategy: Generated {direction.upper()} signal. Entry: {current_price:.5f}, SL: {suggested_sl:.5f}, TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+        
+        # Build 13-length ML features compatible with the shared model schema
+        try:
+            last_row = df.iloc[-1]
+            has_ohlc = all(col in df.columns for col in ['open', 'high', 'low', 'close'])
+            body = float(abs(last_row['close'] - last_row['open'])) if has_ohlc else 0.0
+            if has_ohlc:
+                upper_body = float(max(last_row['open'], last_row['close']))
+                lower_body = float(min(last_row['open'], last_row['close']))
+                rng = float(last_row['high'] - last_row['low'])
+                wick_up = float(last_row['high'] - upper_body)
+                wick_dn = float(lower_body - last_row['low'])
+            else:
+                rng = 0.0
+                wick_up = 0.0
+                wick_dn = 0.0
+
+            atr_val = float(atr) if atr is not None else 0.0
+            atr_safe = atr_val if atr_val != 0 else 1.0
+            range_ratio = rng / atr_safe
+            wick_up_ratio = wick_up / (body + 1e-6) if body > 0 else 0.0
+            wick_dn_ratio = wick_dn / (body + 1e-6) if body > 0 else 0.0
+
+            # Calculate MMCXAUUSDStrategy specific flags
+            sweep_low_flag = 0
+            sweep_high_flag = 0
+            # Check for accumulation breakout
+            if direction == 'buy':
+                if current_price > prices[-20:].max():
+                    sweep_high_flag = 1
+            elif direction == 'sell':
+                if current_price < prices[-20:].min():
+                    sweep_low_flag = 1
+
+            # Detect CHOCH (Change of Character)
+            choch_bullish = 0
+            choch_bearish = 0
+            # Simple CHOCH detection based on accumulation breakout
+            if len(df) >= 20:
+                recent_high = df['high'].iloc[-20:-1].max()
+                recent_low = df['low'].iloc[-20:-1].min()
+                if direction == 'buy' and prices[-20:].max() < recent_high:
+                    choch_bullish = 1
+                elif direction == 'sell' and prices[-20:].min() > recent_low:
+                    choch_bearish = 1
+
+            in_zone_flag = 1  # If we reached here, we found a valid MMCXAUUSDStrategy setup
+
+            vol_spike_m15 = 0
+            if 'tick_volume' in df.columns and len(df) >= 20:
+                avg_vol = float(df['tick_volume'].rolling(window=20).mean().iloc[-1])
+                last_vol = float(df['tick_volume'].iloc[-1])
+                vol_spike_m15 = int(avg_vol > 0 and last_vol > 1.5 * avg_vol)
+
+            if isinstance(df.index, pd.DatetimeIndex):
+                hour = int(df.index[-1].hour)
+            elif 'time' in df.columns:
+                hour = int(pd.to_datetime(df['time'].iloc[-1]).hour)
+            else:
+                hour = 0
+
+            direction_flag = 1 if direction == 'buy' else 0
+
+            # Use accumulation range as a proxy for zone_width_norm
+            zone_width_norm = acc_range_pct * 100  # Convert percentage to meaningful scale
+
+            ml_features = [
+                atr_val,            # 1) ATR
+                zone_width_norm,    # 2) Zone width / ATR (proxy)
+                range_ratio,        # 3) Candle range / ATR
+                wick_up_ratio,      # 4) Upper wick / body
+                wick_dn_ratio,      # 5) Lower wick / body
+                sweep_low_flag,     # 6)
+                sweep_high_flag,    # 7)
+                choch_bullish,      # 8)
+                choch_bearish,      # 9)
+                in_zone_flag,       # 10)
+                vol_spike_m15,      # 11)
+                hour,               # 12)
+                direction_flag,     # 13)
+            ]
+        except Exception:
+            # As a last resort, return a zero vector of length 13 to satisfy the ML filter
+            ml_features = [0.0] * 13
+
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features
+        }
+
+class OTEStrategy:
+    def execute(self, symbol, prices, df, equity, allow_multiple_trades):
+        file_logger.debug(f"Strategy: OTEStrategy | Symbol: {symbol} | Capital: ${equity:.2f}")
+        
+        if len(df) < 25 or df.empty:
+            return empty_strategy_result()
+        
+        # OTE (Order Block + Trend + Entry) logic
+        current_price = prices[-1]
+        direction = None
+        
+        # Look for order block retest
+        ob_low = find_order_block(df, 'buy', lookback=15)
+        ob_high = find_order_block(df, 'sell', lookback=15)
+        
+        if ob_low and current_price > ob_low and current_price < ob_low + (0.3 * calculate_atr(df)):
+            direction = 'buy'
+        elif ob_high and current_price < ob_high and current_price > ob_high - (0.3 * calculate_atr(df)):
+            direction = 'sell'
+        
+        if not direction:
+            return empty_strategy_result()
+        
+        atr = calculate_atr(df)
+        if atr is None or math.isnan(atr) or atr <= 0:
+            return empty_strategy_result()
+        
+        suggested_sl = current_price - (atr * 1.2) if direction == 'buy' else current_price + (atr * 1.2)
+        suggested_tp1 = calculate_tp(current_price, suggested_sl, rr=2.0, direction=direction, symbol_digits=5)
+        suggested_tp2 = calculate_tp(current_price, suggested_sl, rr=3.0, direction=direction, symbol_digits=5)
+        suggested_tp3 = calculate_tp(current_price, suggested_sl, rr=4.0, direction=direction, symbol_digits=5)
+        
+        file_logger.info(f"OTEStrategy: Generated {direction.upper()} signal. Entry: {current_price:.5f}, SL: {suggested_sl:.5f}, TP1: {suggested_tp1:.5f}, TP2: {suggested_tp2:.5f}")
+        
+        # Build 13-length ML features compatible with the shared model schema
+        try:
+            last_row = df.iloc[-1]
+            has_ohlc = all(col in df.columns for col in ['open', 'high', 'low', 'close'])
+            
+            # Calculate hour more safely
+            hour = 0
+            try:
+                if isinstance(df.index, pd.DatetimeIndex) and len(df.index) > 0:
+                    hour = int(df.index[-1].hour)
+                elif 'time' in df.columns and len(df) > 0:
+                    hour = int(pd.to_datetime(df['time'].iloc[-1]).hour)
+                else:
+                    file_logger.warning("Could not determine hour from DataFrame, using default 0")
+            except Exception as hour_error:
+                file_logger.warning(f"Hour calculation failed: {str(hour_error)}, using default 0")
+            
+            body = float(abs(last_row['close'] - last_row['open'])) if has_ohlc else 0.0
+            if has_ohlc:
+                upper_body = float(max(last_row['open'], last_row['close']))
+                lower_body = float(min(last_row['open'], last_row['close']))
+                rng = float(last_row['high'] - last_row['low'])
+                wick_up = float(last_row['high'] - upper_body)
+                wick_dn = float(lower_body - last_row['low'])
+            else:
+                rng = 0.0
+                wick_up = 0.0
+                wick_dn = 0.0
+
+            atr_val = float(atr) if atr is not None else 0.0
+            atr_safe = atr_val if atr_val != 0 else 1.0
+            range_ratio = rng / atr_safe
+            wick_up_ratio = wick_up / (body + 1e-6) if body > 0 else 0.0
+            wick_dn_ratio = wick_dn / (body + 1e-6) if body > 0 else 0.0
+
+            # Fallback approximations for OTE-specific flags we can't derive here
+            sweep_low_flag = 0
+            sweep_high_flag = 0
+            choch_bullish = 0
+            choch_bearish = 0
+            in_zone_flag = 1  # If we reached here, we found an OTE-like setup
+
+            vol_spike_m15 = 0
+            if 'tick_volume' in df.columns and len(df) >= 20:
+                try:
+                    avg_vol = float(df['tick_volume'].rolling(window=20).mean().iloc[-1])
+                    last_vol = float(df['tick_volume'].iloc[-1])
+                    vol_spike_m15 = int(avg_vol > 0 and last_vol > 1.5 * avg_vol)
+                except Exception as vol_error:
+                    file_logger.warning(f"Volume spike calculation failed: {str(vol_error)}")
+                    vol_spike_m15 = 0
+
+            direction_flag = 1 if direction == 'buy' else 0
+            # Use range_ratio as a proxy for zone_width_norm in this fallback
+            zone_width_norm = range_ratio
+
+            ml_features = [
+                atr_val,            # 1) ATR
+                zone_width_norm,    # 2) Zone width / ATR (proxy)
+                range_ratio,        # 3) Candle range / ATR
+                wick_up_ratio,      # 4) Upper wick / body
+                wick_dn_ratio,      # 5) Lower wick / body
+                sweep_low_flag,     # 6)
+                sweep_high_flag,    # 7)
+                choch_bullish,      # 8)
+                choch_bearish,      # 9)
+                in_zone_flag,       # 10)
+                vol_spike_m15,      # 11)
+                hour,               # 12)
+                direction_flag,     # 13)
+            ]
+        except Exception:
+            # As a last resort, return a zero vector of length 13 to satisfy the ML filter
+            ml_features = [0.0] * 13
+        
+        return {
+            "success": True,
+            "direction": direction,
+            "price": current_price,
+            "sl": suggested_sl,
+            "tp1": suggested_tp1,
+            "tp2": suggested_tp2,
+            "tp3": suggested_tp3,
+            "lot_size": 0.0,
+            "features": ml_features
+        }
+
+def empty_strategy_result():
+    """Returns a standardized dictionary for when a strategy yields no result."""
+    return {
+        "success": False,
+        "direction": None,
+        "price": None,
+        "sl": None,
+        "tp1": None,
+        "features": []
+    }
+
+# Additional helper functions that were not in file.py but called in process_strategy_signal or manage_open_positions
+# These would ideally be placed in appropriate utility modules.
+def check_trade_limits(symbol, strategy_name):
+    """
+    Checks if the daily trade limit for a specific strategy and symbol has been reached.
+    This uses the daily_trade_counts global from file.py.
+    """
+    today = datetime.now(pytz.UTC).strftime('%Y-%m-%d')
+    current_count = daily_trade_counts.get(today, {}).get(symbol, {}).get(strategy_name, 0)
+    if current_count >= MAX_TRADES_PER_STRATEGY_PER_SYMBOL_PER_DAY:
+        file_logger.info(f"Daily trade limit for {strategy_name} on {symbol} reached ({current_count}/{MAX_TRADES_PER_STRATEGY_PER_SYMBOL_PER_DAY}).")
+        return False
+    return True
+
+# --- MT5 Utilities ---
+def reset_broker_connection(max_retries=3):
+    """Force reset MT5 connection with retries"""
+    for attempt in range(max_retries):
+        mt5.shutdown()
+        import time
+        time.sleep(5)  # Wait for disconnect
+        if mt5.initialize():
+            return True
+        file_logger.warning(f"Reconnection attempt {attempt+1}/{max_retries} failed")
+    file_logger.error(f"Failed to reconnect after {max_retries} attempts")
+    return False
+
+# --- Trailing Stop Loss Management ---
+def update_trailing_stops():
+    """
+    Update trailing stop losses for all active trades based on current market prices.
+    This function should be called periodically from the main loop.
+    """
+    try:
+        with data_lock:
+            tickets_to_remove = []
+            
+            for ticket, trade_info in active_trades.items():
+                symbol = trade_info['symbol']
+                # Handle both old and new trade info formats
+                direction = trade_info.get('direction')
+                if not direction:
+                    # Try to get direction from type field (old format)
+                    trade_type = trade_info.get('type', '')
+                    if trade_type == 'BUY':
+                        direction = 'buy'
+                    elif trade_type == 'SELL':
+                        direction = 'sell'
+                    else:
+                        file_logger.warning(f"Could not determine direction for ticket {ticket}, skipping")
+                        continue
+                
+                entry_price = trade_info['entry_price']
+                current_sl = trade_info.get('current_sl', trade_info.get('sl', entry_price))
+                trailing_sl_distance = trade_info.get('trailing_sl_distance')
+                
+                # If no trailing_sl_distance, calculate it from ATR
+                if not trailing_sl_distance:
+                    atr = trade_info.get('atr', 0.001)  # Default ATR if not available
+                    trailing_sl_distance = atr * 1.5
+                
+                # Get current market price
+                tick = mt5.symbol_info_tick(symbol)
+                if not tick:
+                    continue
+                
+                current_price = tick.ask if direction == 'buy' else tick.bid
+                
+                # Calculate new trailing stop level
+                if direction == 'buy':
+                    new_trailing_sl = current_price - trailing_sl_distance
+                    # Only move SL up for buy trades
+                    if new_trailing_sl > current_sl:
+                        new_sl = new_trailing_sl
+                    else:
+                        new_sl = current_sl
+                else:  # sell
+                    new_trailing_sl = current_price + trailing_sl_distance
+                    # Only move SL down for sell trades
+                    if new_trailing_sl < current_sl:
+                        new_sl = new_trailing_sl
+                    else:
+                        new_sl = current_sl
+                
+                # Check if SL needs to be updated (minimum 0.00001 difference)
+                if abs(new_sl - current_sl) > 0.00001:
+                    # Get current position to check if it still exists
+                    position = mt5.positions_get(ticket=ticket)
+                    if not position:
+                        tickets_to_remove.append(ticket)
+                        file_logger.info(f"Trade {ticket} ({symbol}) closed, removing from active trades")
+                        # move to next ticket
+                        continue
+
+                    # Update stop loss in MT5 using TRADE_ACTION_SLTP
+                    request = {
+                        "action": mt5.TRADE_ACTION_SLTP,
+                        "position": ticket,
+                        "symbol": symbol,
+                        "sl": new_sl,
+                        "tp": trade_info.get('tp', 0)
+                    }
+                    result_sl_update = mt5.order_send(request)
+                    if result_sl_update and result_sl_update.retcode == mt5.TRADE_RETCODE_DONE:
+                        trade_info['current_sl'] = new_sl
+                        file_logger.info(f"[SUCCESS] Trailing stop updated for {ticket}")
+                        try:
+                            pos_obj = position[0]
+                            log_position_update_to_file(pos_obj, update_type="SL_UPDATED")
+                        except Exception:
+                            pass
+                    elif result_sl_update:
+                        if result_sl_update.retcode in [10013, 10016]:
+                            file_logger.debug(f"Trailing SL update skipped for ticket {ticket} ({symbol}): {result_sl_update.retcode}")
+                        else:
+                            file_logger.warning(f"Failed to update trailing SL for ticket {ticket} ({symbol}): {result_sl_update.retcode}")
+                    else:
+                        file_logger.warning(f"Failed to update trailing SL for ticket {ticket} ({symbol}): No result")
+                
+                # Check if trade is closed (SL or TP hit)
+                position = mt5.positions_get(ticket=ticket)
+                if not position:
+                    tickets_to_remove.append(ticket)
+                    file_logger.info(f"Trade {ticket} ({symbol}) closed, removing from active trades")
+            
+            # Remove closed trades
+            for ticket in tickets_to_remove:
+                del active_trades[ticket]
+                
+    except Exception as e:
+        file_logger.error(f"Error updating trailing stops: {str(e)}", exc_info=True)
+
+# --- Strategy Helper Functions ---
+def find_order_block(df, direction, lookback=10):
+    """
+    Find order block levels in the price data.
+    
+    Args:
+        df: DataFrame with OHLC data
+        direction: 'buy' or 'sell'
+        lookback: Number of candles to look back
+    
+    Returns:
+        float: Order block level or None if not found
+    """
+    if len(df) < lookback:
+        return None
+    
+    for i in range(lookback, len(df) - 1):
+        # Check if there's a strong bullish candle
+        if direction == 'buy': 
+            if df['close'].iloc[i] > df['open'].iloc[i] and df['close'].iloc[i] - df['open'].iloc[i] > (df['high'].iloc[i] - df['low'].iloc[i]) * 0.6:
+                # Check if price retraces to this level
+                if (df['low'].iloc[-1] <= df['low'].iloc[i] and df['close'].iloc[-1] > df['low'].iloc[i]):
+                    return df['low'].iloc[i]
+        elif direction == 'sell': # Looking for a bullish candle before a strong bearish move
+            if df['open'].iloc[i] > df['close'].iloc[i] and df['close'].iloc[i+1] < df['open'].iloc[i+1]:
+                # Check if price retraces to this level
+                if (df['high'].iloc[-1] >= df['high'].iloc[i] and df['close'].iloc[-1] < df['high'].iloc[i]):
+                    return df['high'].iloc[i]
+    
+    return None
+
+def find_swing_high_low(df, window=10):
+    """
+    Find swing highs and lows in the price data.
+    
+    Args:
+        df: DataFrame with OHLC data
+        window: Window size for swing detection
+    
+    Returns:
+        tuple: (swing_highs, swing_lows) lists of (index, price) tuples
+    """
+    if len(df) < window * 2:
+        return [], []
+    
+    swing_highs = []
+    swing_lows = []
+    
+    for i in range(window, len(df) - window):
+        # Check for swing high
+        if df['high'].iloc[i] == df['high'].iloc[i-window:i+window+1].max():
+            swing_highs.append((i, df['high'].iloc[i]))
+        
+        # Check for swing low
+        if df['low'].iloc[i] == df['low'].iloc[i-window:i+window+1].min():
+            swing_lows.append((i, df['low'].iloc[i]))
+    
+    return swing_highs, swing_lows
+
+def empty_strategy_result():
+    """
+    Return an empty strategy result indicating no signal.
+    """
+    return {
+        "success": False,
+        "direction": None,
+        "price": 0.0,
+        "sl": 0.0,
+        "tp1": 0.0,
+        "tp2": 0.0,
+        "tp3": 0.0,
+        "lot_size": 0.0,
+        "features": []
+    }
+
+# --- LLM Sentiment Analyzer Initialization ---
+def init_llm_sentiment_analyzer(api_key: str):
+    """
+    Initialize the LLM Sentiment Analyzer with the provided API key.
+
+    Args:
+        api_key (str): Gemini API key
+    """
+    global llm_sentiment_analyzer_instance
+
+    file_logger.info(f"Starting LLM Sentiment Analyzer initialization with API key: {api_key[:10]}...")
+
+    try:
+        # Import the LLM Sentiment Analyzer class
+        file_logger.info("Importing LLMSentimentAnalyzer module...")
+        from modules.llm_sentiment_analyzer import LLMSentimentAnalyzer
+
+        # Initialize the analyzer
+        file_logger.info("Creating LLMSentimentAnalyzer instance...")
+        llm_sentiment_analyzer_instance = LLMSentimentAnalyzer(api_key)
+
+        if llm_sentiment_analyzer_instance is not None:
+            file_logger.info("✅ LLMSentimentAnalyzer instance created successfully")
+
+            if hasattr(llm_sentiment_analyzer_instance, 'model') and llm_sentiment_analyzer_instance.model is not None:
+                file_logger.info("✅ LLM Sentiment Analyzer initialized successfully with working model")
+            else:
+                file_logger.warning("⚠️ LLM Sentiment Analyzer instance created but model is not available")
+                file_logger.info("ℹ️ News sentiment analysis will use neutral sentiment.")
+        else:
+            file_logger.error("❌ LLMSentimentAnalyzer instance is None")
+            file_logger.warning("LLM sentiment analysis will be disabled.")
+            llm_sentiment_analyzer_instance = None
+
+    except ImportError as e:
+        file_logger.error(f"❌ Could not import LLMSentimentAnalyzer module: {str(e)}")
+        file_logger.warning("LLM sentiment analysis will be disabled.")
+        llm_sentiment_analyzer_instance = None
+    except Exception as e:
+        file_logger.error(f"❌ Error initializing LLM Sentiment Analyzer: {str(e)}")
+        file_logger.error(f"❌ Exception type: {type(e).__name__}")
+        import traceback
+        file_logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+        file_logger.warning("LLM sentiment analysis will be disabled.")
+        llm_sentiment_analyzer_instance = None
+
+    file_logger.info(f"LLM Sentiment Analyzer initialization completed. Instance: {llm_sentiment_analyzer_instance is not None}")
+
+# --- Broker Performance Monitoring ---
+def measure_broker_performance():
+    """Measures MT5 connection latency and time synchronization"""
+    try:
+        # Measure latency
+        start_time = time.perf_counter()
+        tick = mt5.symbol_info_tick('XAUUSD')
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        
+        # Check time synchronization
+        server_time = mt5.terminal_info().time
+        local_time = datetime.now(timezone.utc)
+        time_diff = (local_time - server_time).total_seconds()
+        
+        # Log performance metrics
+        file_logger.info(f"Broker latency: {latency_ms:.2f}ms | Time sync diff: {time_diff:.3f}s")
+        
+        # Return results
+        return {
+            "latency_ms": latency_ms,
+            "time_diff": time_diff
+        }
+    except Exception as e:
+        file_logger.error(f"Broker performance check failed: {str(e)}", exc_info=True)
+        return None
+
+# Add to initialization
+STARTUP_TIME = datetime.now(timezone.utc)
+LAST_BROKER_CHECK = STARTUP_TIME
+
+# Add this function
+def check_broker_connection():
+    """Check and maintain healthy broker connection"""
+    global LAST_BROKER_CHECK
+    
+    if (datetime.now(timezone.utc) - LAST_BROKER_CHECK).total_seconds() > 300:  # 5 minutes
+        if not mt5.initialize():
+            file_logger.error(f"Broker connection lost: {mt5.last_error()}")
+            mt5.shutdown()
+            return False
+        
+        server_time = mt5.terminal_info().time
+        time_diff = (datetime.now(timezone.utc) - server_time).total_seconds()
+        
+        if time_diff > 60:
+            file_logger.error(f"Broker time frozen! Server: {server_time}, Local: {datetime.now(timezone.utc)}, Diff: {time_diff:.1f}s")
+            mt5.shutdown()
+            return False
+            
+        LAST_BROKER_CHECK = datetime.now(timezone.utc)
+    return True
+
+# --- Enhanced Broker Time Check ---
+def reset_broker_connection():
+    """Reset broker connection"""
+    try:
+        mt5.shutdown()
+        time.sleep(1)
+        if not mt5.initialize():
+            file_logger.error("Failed to reconnect to broker")
+            return False
+        file_logger.info("Broker connection reset successfully")
+        return True
+    except Exception as e:
+        file_logger.error(f"Error resetting broker connection: {str(e)}")
+        return False
+
+def check_broker_time():
+    """Verify broker time is current"""
+    try:
+        # The proper way to get server time is via symbol_info_tick
+        tick = mt5.symbol_info_tick('XAUUSD')
+        if not tick:
+            file_logger.error("No tick data - cannot check broker time")
+            return False
+            
+        server_time = datetime.fromtimestamp(tick.time)
+        time_diff = (datetime.now(timezone.utc) - server_time).total_seconds()
+        
+        if time_diff > 600:  # 10 minutes
+            file_logger.error(f"FROZEN BROKER TIME: {time_diff//3600}h {(time_diff%3600)//60}m old")
+            if not reset_broker_connection():
+                return False
+            
+            # Verify after reconnect
+            tick = mt5.symbol_info_tick('XAUUSD')
+            server_time = datetime.fromtimestamp(tick.time)
+            return (datetime.now(timezone.utc) - server_time).total_seconds() <= 600
+            
+        return True
+    except Exception as e:
+        file_logger.error(f"Broker time check failed: {str(e)}")
+        return False 

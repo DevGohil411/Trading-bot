@@ -1,0 +1,10 @@
+{
+  "bot_active": true,
+  "killzone": false,
+  "strategy": "MMXM",
+  "all_strategies": false,
+  "selected_strategies": [
+    "judas_swing"
+  ],
+  "killzone_map": {}
+}

@@ -1,0 +1,61 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.venv/
+venv/
+*.egg-info/
+.python-version
+.pytest_cache/
+
+# project artifacts
+logs/
+logs/*.json
+logs/*.txt
+trades/*.db
+trades/*.csv.backup*
+trades/*.bak*
+trades/*.backup_*
+api_server.log
+*.log
+
+# local state
+mt5_accounts.json
+users.json
+last_trade_times.json
+logs/active_trades.json
+logs/bot_runtime_settings.json
+logs/last_executed_candle.json
+
+# config (keep a template instead)
+config.json

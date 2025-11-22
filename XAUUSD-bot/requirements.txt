@@ -1,0 +1,40 @@
+# Environment variable loading
+python-dotenv>=1.0.0
+
+# Core Trading and Data Analysis
+# Install MetaTrader5 only on Windows environments
+MetaTrader5>=5.0.45; platform_system == "Windows"
+pandas>=1.5.0
+numpy>=1.24.0
+
+# Web Framework and API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# CORS Middleware for FastAPI
+fastapi[all]>=0.104.0
+
+# Machine Learning and AI
+joblib>=1.3.0
+scikit-learn>=1.3.0
+google-generativeai>=0.3.0
+
+# Telegram Bot Integration
+python-telegram-bot>=20.0
+
+# Web Scraping and HTML Parsing
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# Time Zone Handling
+pytz>=2023.3
+
+# Retry and Backoff Logic
+backoff>=2.2.0
+
+# Database Support (SQLite is built-in, but for completeness)
+# sqlite3 is included in Python standard library
+
+# Additional utilities that might be needed
+lxml>=4.9.0

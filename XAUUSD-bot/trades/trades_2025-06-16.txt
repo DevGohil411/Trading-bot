@@ -1,0 +1,114 @@
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-16 13:34:59 UTC
+Strategy: order_block
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3415.29
+Stop Loss: 3407.94
+Take Profit 1: 3422.64
+Take Profit 2: 3430.00
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $7.35
+- Reward Amount: $7.35
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-16 13:37:00 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3413.25
+Stop Loss: 3405.74
+Take Profit 1: 3420.76
+Take Profit 2: 3428.26
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $7.51
+- Reward Amount: $7.51
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-16 13:46:24 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3407.20
+Stop Loss: 3398.83
+Take Profit 1: 3415.57
+Take Profit 2: 3423.95
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $8.37
+- Reward Amount: $8.37
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-16 14:00:05 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3388.16
+Stop Loss: 3377.68
+Take Profit 1: 3398.64
+Take Profit 2: 3409.12
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $10.48
+- Reward Amount: $10.48
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-16 14:15:11 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3395.37
+Stop Loss: 3384.09
+Take Profit 1: 3406.65
+Take Profit 2: 3417.94
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $11.28
+- Reward Amount: $11.28
+- Risk/Reward Ratio: 1.00
+==================================================
+
+==================================================
+TRADE EXECUTED
+==================================================
+Time: 2025-06-16 14:56:12 UTC
+Strategy: ote
+Symbol: XAUUSD
+Type: BUY
+Entry Price: 3396.76
+Stop Loss: 3384.31
+Take Profit 1: 3409.21
+Take Profit 2: 3421.65
+Lot Size: 0.01
+
+Risk Analysis:
+- Risk Amount: $12.45
+- Reward Amount: $12.45
+- Risk/Reward Ratio: 1.00
+==================================================
