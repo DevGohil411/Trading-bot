@@ -18,6 +18,7 @@ import {
   TrendingUp,
   LinkIcon,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -101,6 +102,22 @@ export default function Header() {
                 Snipr-X AI
                 <Badge className="bg-blue-500 text-white text-xs px-1.5 py-0.5">
                   AI
+                </Badge>
+              </span>
+            </Link>
+            <Link
+              href="/ai-chat"
+              className={`text-sm font-medium transition-all px-3 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${
+                isActive("/ai-chat")
+                  ? "text-primary bg-primary/20 shadow-lg shadow-primary/50 border border-primary/30"
+                  : "hover:text-primary hover:bg-primary/10"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="inline-flex items-center gap-1">
+                AI Assistant
+                <Badge className="bg-green-500 text-white text-xs px-1.5 py-0.5">
+                  NEW
                 </Badge>
               </span>
             </Link>
@@ -238,6 +255,22 @@ export default function Header() {
                   Snipr-X AI
                   <Badge className="bg-blue-500 text-white text-xs px-1.5 py-0.5">
                     AI
+                  </Badge>
+                </span>
+              </Link>
+              <Link
+                href="/ai-chat"
+                className={`text-sm font-medium transition-all px-4 py-3 rounded-lg flex items-center gap-3 ${
+                  isActive("/ai-chat")
+                    ? "text-primary bg-primary/20 shadow-lg shadow-primary/50 border border-primary/30"
+                    : "hover:text-primary hover:bg-primary/10"
+                }`}
+              >
+                <Sparkles className="w-4 h-4 flex-shrink-0" />
+                <span className="inline-flex items-center gap-1.5 flex-1">
+                  AI Assistant
+                  <Badge className="bg-green-500 text-white text-xs px-1.5 py-0.5">
+                    NEW
                   </Badge>
                 </span>
               </Link>

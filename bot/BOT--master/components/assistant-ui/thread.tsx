@@ -8,7 +8,6 @@ import {
   PencilIcon,
   RefreshCwIcon,
   Square,
-  MessageSquare,
 } from "lucide-react";
 
 import {
@@ -89,27 +88,23 @@ const ThreadWelcome: FC = () => {
   return (
     <div className="aui-thread-welcome-root mx-auto my-auto flex w-full max-w-[var(--thread-max-width)] flex-grow flex-col">
       <div className="aui-thread-welcome-center flex w-full flex-grow flex-col items-center justify-center">
-        <div className="aui-thread-welcome-message flex size-full flex-col justify-center items-center px-8 text-center">
-          <div className="w-20 h-20 gradient-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-            <MessageSquare className="w-10 h-10 text-black" />
-          </div>
+        <div className="aui-thread-welcome-message flex size-full flex-col justify-center px-8">
           <m.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="aui-thread-welcome-message-motion-1 text-3xl font-bold mb-3"
+            className="aui-thread-welcome-message-motion-1 text-2xl font-semibold"
           >
-            Welcome to SniprX AI Assistant! 🎯
+            Hello there!
           </m.div>
           <m.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ delay: 0.1 }}
-            className="aui-thread-welcome-message-motion-2 text-xl text-muted-foreground/80 max-w-2xl"
+            className="aui-thread-welcome-message-motion-2 text-2xl text-muted-foreground/65"
           >
-            Your intelligent trading companion. Ask me anything about
-            strategies, risk management, market analysis, or bot configuration!
+            How can I help you today?
           </m.div>
         </div>
       </div>
@@ -120,35 +115,27 @@ const ThreadWelcome: FC = () => {
 
 const ThreadSuggestions: FC = () => {
   return (
-    <div className="aui-thread-welcome-suggestions grid w-full gap-3 pb-4 @md:grid-cols-2">
+    <div className="aui-thread-welcome-suggestions grid w-full gap-2 pb-4 @md:grid-cols-2">
       {[
         {
-          title: "📊 MMXM Strategy",
-          label: "Learn market maker methodology",
-          action:
-            "Explain MMXM trading strategy with optimal entry points and risk management",
-          gradient: "from-blue-500/10 to-purple-500/10",
+          title: "What's the weather",
+          label: "in San Francisco?",
+          action: "What's the weather in San Francisco?",
         },
         {
-          title: "🎯 Risk Management",
-          label: "Protect your capital",
-          action:
-            "What are the best risk management tips for algorithmic trading? Include position sizing and stop loss strategies",
-          gradient: "from-green-500/10 to-emerald-500/10",
+          title: "Explain React hooks",
+          label: "like useState and useEffect",
+          action: "Explain React hooks like useState and useEffect",
         },
         {
-          title: "📈 Chart Analysis",
-          label: "Master XAUUSD trading",
-          action:
-            "How can I read charts effectively for XAUUSD trading? Include key indicators and patterns",
-          gradient: "from-orange-500/10 to-red-500/10",
+          title: "Write a SQL query",
+          label: "to find top customers",
+          action: "Write a SQL query to find top customers",
         },
         {
-          title: "⚙️ Bot Optimization",
-          label: "Fine-tune your settings",
-          action:
-            "How should I optimize my bot settings for the current market conditions? Include parameter recommendations",
-          gradient: "from-purple-500/10 to-pink-500/10",
+          title: "Create a meal plan",
+          label: "for healthy weight loss",
+          action: "Create a meal plan for healthy weight loss",
         },
       ].map((suggestedAction, index) => (
         <m.div
@@ -166,13 +153,13 @@ const ThreadSuggestions: FC = () => {
           >
             <Button
               variant="ghost"
-              className={`aui-thread-welcome-suggestion h-auto w-full flex-1 flex-col items-start justify-start gap-2 rounded-2xl border-2 px-5 py-5 text-left hover:border-primary/40 transition-all hover:shadow-lg bg-gradient-to-br ${suggestedAction.gradient} hover:scale-[1.02]`}
+              className="aui-thread-welcome-suggestion h-auto w-full flex-1 flex-wrap items-start justify-start gap-1 rounded-3xl border px-5 py-4 text-left text-sm @md:flex-col dark:hover:bg-accent/60"
               aria-label={suggestedAction.action}
             >
-              <span className="aui-thread-welcome-suggestion-text-1 font-bold text-base">
+              <span className="aui-thread-welcome-suggestion-text-1 font-medium">
                 {suggestedAction.title}
               </span>
-              <span className="aui-thread-welcome-suggestion-text-2 text-sm text-muted-foreground">
+              <span className="aui-thread-welcome-suggestion-text-2 text-muted-foreground">
                 {suggestedAction.label}
               </span>
             </Button>
@@ -378,7 +365,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
       hideWhenSingleBranch
       className={cn(
         "aui-branch-picker-root mr-2 -ml-2 inline-flex items-center text-xs text-muted-foreground",
-        className
+        className,
       )}
       {...rest}
     >

@@ -55,7 +55,7 @@ const useAttachmentSrc = () => {
         ?.image;
       if (!src) return {};
       return { src };
-    })
+    }),
   );
 
   return useFileSrc(file) ?? src;
@@ -111,7 +111,7 @@ const AttachmentPreviewDialog: FC<PropsWithChildren> = ({ children }) => {
 
 const AttachmentThumb: FC = () => {
   const isImage = useAssistantState(
-    ({ attachment }) => attachment.type === "image"
+    ({ attachment }) => attachment.type === "image",
   );
   const src = useAttachmentSrc();
 
@@ -134,7 +134,7 @@ const AttachmentUI: FC = () => {
   const isComposer = api.attachment.source === "composer";
 
   const isImage = useAssistantState(
-    ({ attachment }) => attachment.type === "image"
+    ({ attachment }) => attachment.type === "image",
   );
   const typeLabel = useAssistantState(({ attachment }) => {
     const type = attachment.type;
@@ -157,7 +157,7 @@ const AttachmentUI: FC = () => {
         className={cn(
           "aui-attachment-root relative",
           isImage &&
-            "aui-attachment-root-composer only:[&>#attachment-tile]:size-24"
+            "aui-attachment-root-composer only:[&>#attachment-tile]:size-24",
         )}
       >
         <AttachmentPreviewDialog>
@@ -166,7 +166,7 @@ const AttachmentUI: FC = () => {
               className={cn(
                 "aui-attachment-tile size-14 cursor-pointer overflow-hidden rounded-[14px] border bg-muted transition-opacity hover:opacity-75",
                 isComposer &&
-                  "aui-attachment-tile-composer border-foreground/20"
+                  "aui-attachment-tile-composer border-foreground/20",
               )}
               role="button"
               id="attachment-tile"

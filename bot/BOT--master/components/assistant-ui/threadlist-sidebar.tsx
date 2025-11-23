@@ -1,5 +1,5 @@
 import * as React from "react";
-import { MessageSquare, Target, LayoutDashboard } from "lucide-react";
+import { Github, MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import {
   Sidebar,
@@ -12,7 +12,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { ThreadList } from "@/components/assistant-ui/thread-list";
-import { Badge } from "@/components/ui/badge";
 
 export function ThreadListSidebar({
   ...props
@@ -24,17 +23,18 @@ export function ThreadListSidebar({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
-                <Link href="/chatbot">
-                  <div className="aui-sidebar-header-icon-wrapper flex aspect-square size-8 items-center justify-center rounded-lg gradient-primary">
-                    <MessageSquare className="aui-sidebar-header-icon size-4 text-black" />
+                <Link
+                  href="https://assistant-ui.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <div className="aui-sidebar-header-icon-wrapper flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <MessagesSquare className="aui-sidebar-header-icon size-4" />
                   </div>
                   <div className="aui-sidebar-header-heading mr-6 flex flex-col gap-0.5 leading-none">
                     <span className="aui-sidebar-header-title font-semibold">
-                      SniprX AI
+                      assistant-ui
                     </span>
-                    <Badge className="bg-primary/10 text-primary border-primary/20 text-xs w-fit">
-                      ChatBot
-                    </Badge>
                   </div>
                 </Link>
               </SidebarMenuButton>
@@ -50,17 +50,18 @@ export function ThreadListSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard">
+              <Link
+                href="https://github.com/assistant-ui/assistant-ui"
+                target="_blank"
+              >
                 <div className="aui-sidebar-footer-icon-wrapper flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <LayoutDashboard className="aui-sidebar-footer-icon size-4" />
+                  <Github className="aui-sidebar-footer-icon size-4" />
                 </div>
                 <div className="aui-sidebar-footer-heading flex flex-col gap-0.5 leading-none">
                   <span className="aui-sidebar-footer-title font-semibold">
-                    Dashboard
+                    GitHub
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    Back to Trading
-                  </span>
+                  <span>View Source</span>
                 </div>
               </Link>
             </SidebarMenuButton>
